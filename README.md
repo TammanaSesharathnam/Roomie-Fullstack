@@ -1,4 +1,4 @@
-# Roomie Connect
+# Roomie-Connect
 
 Roomie Connect is a full-stack roommate finding and communication platform designed to help users discover compatible roommates, send connection requests, manage profiles, and communicate through an integrated chat system.
 
