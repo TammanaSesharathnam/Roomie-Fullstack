@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Preferences - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #a87dc2 0%, #6a0dad 100%);
+            display: flex; justify-content: center; align-items: center; padding: 20px;
+        }
+        .container {
+            background: rgba(10,0,30,0.82); border-radius: 18px;
+            padding: 36px; width: 100%; max-width: 560px; color: #fff;
+        }
+        h1 { font-size: 26px; margin-bottom: 6px; text-align: center; }
+        .sub { color: #ce93d8; font-size: 13px; margin-bottom: 28px; text-align: center; }
+        .form-group { margin-bottom: 16px; }
+        label { font-size: 13px; color: #ce93d8; display: block; margin-bottom: 6px; font-weight: 600; }
+        input, select, textarea {
+            width: 100%; padding: 11px 13px;
+            background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2);
+            border-radius: 8px; font-size: 14px; color: #fff;
+        }
+        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.4); }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #ce93d8; }
+        select option { background: #4a0080; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .radio-group { display: flex; gap: 10px; }
+        .radio-option {
+            flex: 1; padding: 10px; border: 1.5px solid rgba(255,255,255,0.2);
+            border-radius: 8px; cursor: pointer; font-size: 14px; color: #fff;
+            text-align: center; transition: all 0.2s;
+        }
+        .radio-option.selected { border-color: #ce93d8; background: rgba(206,147,216,0.2); }
+        .range-row { display: flex; align-items: center; gap: 10px; }
+        .range-row input[type=range] { flex: 1; }
+        .range-val { font-size: 20px; font-weight: 700; color: #ce93d8; min-width: 24px; }
+        .section-title {
+            font-size: 11px; font-weight: 700; color: #ce93d8;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin: 20px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;
+        }
+        .submit-btn {
+            width: 100%; padding: 14px; background: #6a0dad; color: #fff;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 700;
+            cursor: pointer; margin-top: 20px;
+        }
+        .submit-btn:hover { background: #9c4dcc; }
+        .error-msg { color: #f48fb1; font-size: 13px; margin-top: 8px; display: none; }
+        .success-msg { color: #a5d6a7; font-size: 13px; margin-top: 8px; display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>My Preferences</h1>
+    <p class="sub">Fill in your details to find your perfect roommate</p>
+
+    <div class="section-title">Basic Info</div>
+    <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="name" placeholder="Your full name"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="phone" placeholder="Phone number"></div>
+    </div>
+    <div class="form-row">
+        <div class="form-group"><label>Location</label><input type="text" id="location" placeholder="City / Area"></div>
+        <div class="form-group"><label>Budget (₹/month)</label><input type="number" id="budget" placeholder="e.g. 5000"></div>
+    </div>
+
+    <div class="section-title">Gender *</div>
+    <div class="radio-group" id="gender-group">
+        <div class="radio-option" onclick="pick('gender','male',this)">Male</div>
+        <div class="radio-option" onclick="pick('gender','female',this)">Female</div>
+        <div class="radio-option" onclick="pick('gender','other',this)">Other</div>
+    </div>
+
+    <div class="section-title">Food Preference *</div>
+    <div class="radio-group" id="diet-group">
+        <div class="radio-option" onclick="pick('diet','veg',this)">🥗 Veg</div>
+        <div class="radio-option" onclick="pick('diet','nonveg',this)">🍗 Non-Veg</div>
+    </div>
+
+    <div class="section-title">Sleep Schedule *</div>
+    <div class="radio-group" id="schedule-group">
+        <div class="radio-option" onclick="pick('schedule','morningbird',this)">🌅 Morning Bird</div>
+        <div class="radio-option" onclick="pick('schedule','nightowl',this)">🌙 Night Owl</div>
+    </div>
+
+    <div class="section-title">Social Interaction *</div>
+    <div class="radio-group" id="personality-group">
+        <div class="radio-option" onclick="pick('personality','introvert',this)">🎧 Introvert</div>
+        <div class="radio-option" onclick="pick('personality','extrovert',this)">🎉 Extrovert</div>
+    </div>
+
+    <div class="section-title">Cleanliness (1-5)</div>
+    <div class="range-row">
+        <span style="color:#ce93d8;font-size:13px">1</span>
+        <input type="range" id="cleanliness" min="1" max="5" value="3" oninput="document.getElementById('cleanVal').textContent=this.value">
+        <span style="color:#ce93d8;font-size:13px">5</span>
+        <span class="range-val" id="cleanVal">3</span><span style="color:#ce93d8;font-size:13px">/5</span>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
+    <button class="submit-btn" onclick="submitForm()">Save & View Profile →</button>
+</div>
+
+<script src="api.js"></script>
+<script>
+    const sel = { gender:null, diet:null, schedule:null, personality:null };
+
+    function pick(field, value, el) {
+        sel[field] = value;
+        document.querySelectorAll(`#${field}-group .radio-option`).forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
+    // Pre-fill if already logged in
+    window.onload = async function() {
+        const user = getUser ? getUser() : null;
+        if (user) {
+            document.getElementById('name').value = user.name||'';
+            document.getElementById('phone').value = user.phone||'';
+            document.getElementById('location').value = user.location||'';
+            document.getElementById('budget').value = user.budget||'';
+        }
+        try {
+            const res = await api.getMyProfile();
+            const u = res.user;
+            document.getElementById('name').value = u.name||'';
+            document.getElementById('phone').value = u.phone||'';
+            document.getElementById('location').value = u.location||'';
+            document.getElementById('budget').value = u.budget||'';
+            ['gender','diet','schedule','personality'].forEach(f => {
+                if (u[f]) {
+                    sel[f] = u[f];
+                    const opts = document.querySelectorAll(`#${f}-group .radio-option`);
+                    opts.forEach(o => { if (o.textContent.toLowerCase().includes(u[f])) o.classList.add('selected'); });
+                }
+            });
+        } catch(e) {}
+    };
+
+    async function submitForm() {
+        const errEl = document.getElementById('errorMsg');
+        const succEl = document.getElementById('successMsg');
+        errEl.style.display='none'; succEl.style.display='none';
+
+        if (!sel.gender || !sel.diet || !sel.schedule || !sel.personality) {
+            errEl.textContent = 'Please select: Gender, Food Preference, Sleep Schedule and Personality.';
+            errEl.style.display = 'block'; return;
+        }
+
+        const data = {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            location: document.getElementById('location').value.trim(),
+            budget: Number(document.getElementById('budget').value)||0,
+            ...sel
+        };
+
+        // Save to localStorage for compatibility with original app
+        localStorage.setItem('profile', JSON.stringify({
+            name: data.name, gender: data.gender, food: data.diet,
+            sleep: data.schedule, social: data.personality,
+            cleanliness: document.getElementById('cleanliness').value
+        }));
+
+        // Also save to server if logged in
+        try {
+            await api.updateProfile(data);
+            const user = getUser();
+            saveSession(sessionStorage.getItem('rc_token'), { ...user, ...data });
+        } catch(e) {}
+
+        succEl.textContent = 'Preferences saved! Loading your profile...';
+        succEl.style.display = 'block';
+        setTimeout(() => window.location.href = 'p.html', 1000);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roomie Connect - Chat</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); min-height: 100vh; display: flex; }
+    .sidebar { width: 220px; background: rgba(0,0,0,0.3); padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 100vh; flex-shrink: 0; }
+    .sidebar h2 { color: #fff; font-size: 18px; margin-bottom: 16px; text-align: center; }
+    .sidebar a { color: #e1bee7; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-size: 14px; display: block; }
+    .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; }
+    .chat-area { flex: 1; display: flex; gap: 0; }
+
+    /* Contacts list */
+    .contacts-panel { width: 260px; background: rgba(20,0,40,0.75); display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); }
+    .contacts-header { padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 15px; font-weight: 600; }
+    .contact-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .contact-item:hover, .contact-item.active { background: rgba(206,147,216,0.15); }
+    .contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .contact-name { color: #fff; font-size: 14px; font-weight: 500; }
+    .contact-status { color: #a5d6a7; font-size: 11px; }
+    .no-contacts { padding: 30px 16px; text-align: center; color: #ce93d8; font-size: 13px; line-height: 1.8; }
+
+    /* Chat window */
+    .chat-window { flex: 1; display: flex; flex-direction: column; }
+    .chat-header { background: rgba(20,0,40,0.75); padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 12px; }
+    .chat-header-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; }
+    .chat-header-name { color: #fff; font-size: 15px; font-weight: 600; }
+    .chat-header-sub { color: #a5d6a7; font-size: 11px; }
+    .messages-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; max-height: calc(100vh - 140px); }
+    .msg { max-width: 65%; display: flex; flex-direction: column; }
+    .msg.mine { align-self: flex-end; align-items: flex-end; }
+    .msg.theirs { align-self: flex-start; align-items: flex-start; }
+    .msg-bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; word-break: break-word; }
+    .msg.mine .msg-bubble { background: #7b1fa2; color: #fff; border-bottom-right-radius: 4px; }
+    .msg.theirs .msg-bubble { background: rgba(255,255,255,0.12); color: #fff; border-bottom-left-radius: 4px; }
+    .msg-time { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 3px; padding: 0 4px; }
+    .chat-input-bar { background: rgba(20,0,40,0.75); padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; }
+    .chat-input-bar input { flex: 1; padding: 11px 14px; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 24px; font-size: 14px; color: #fff; }
+    .chat-input-bar input::placeholder { color: rgba(255,255,255,0.4); }
+    .chat-input-bar input:focus { outline: none; border-color: #ce93d8; }
+    .send-btn { width: 42px; height: 42px; border-radius: 50%; background: #7b1fa2; border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .send-btn:hover { background: #9c4dcc; }
+    .no-chat { flex: 1; display: flex; align-items: center; justify-content: center; color: #ce93d8; font-size: 15px; flex-direction: column; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>🏠 Roomie Connect</h2>
+    <a href="home.html">My Preferences</a>
+    <a href="profile.html">My Profile</a>
+    <a href="search.html">Find Roommates</a>
+    <a href="requests.html">📩 Requests</a>
+    <a href="chat.html" class="active">💬 Chats</a>
+    <a href="index.html" onclick="logout()" style="margin-top:auto;color:#f48fb1;">Logout</a>
+  </div>
+
+  <div class="chat-area">
+    <!-- Contacts list -->
+    <div class="contacts-panel">
+      <div class="contacts-header">💬 Conversations</div>
+      <div id="contactsList"><div class="no-contacts">Loading contacts...<br>Only accepted connections appear here.</div></div>
+    </div>
+
+    <!-- Chat window -->
+    <div class="chat-window" id="chatWindow">
+      <div class="no-chat">
+        <span style="font-size:40px">💬</span>
+        <span>Select a contact to start chatting</span>
+        <span style="font-size:12px;color:rgba(206,147,216,0.6)">Only accepted connections can chat</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    requireAuth();
+    const me = getUser();
+    let activeUserId = null;
+    let activeUserName = '';
+    let pollInterval = null;
+
+    // Storage key for messages (local storage simulation — replace with real DB in production)
+    function getMsgs(userId) {
+      const key = `rc_chat_${Math.min(me.id,userId)}_${Math.max(me.id,userId)}`;
+      try { return JSON.parse(localStorage.getItem(key)||'[]'); } catch(e) { return []; }
+    }
+    function saveMsgs(userId, msgs) {
+      const key = `rc_chat_${Math.min(me.id,userId)}_${Math.max(me.id,userId)}`;
+      localStorage.setItem(key, JSON.stringify(msgs));
+    }
+
+    // Load accepted contacts from requests
+    window.onload = async function() {
+      try {
+        const res = await api.getContactRequests();
+        const accepted = res.requests.filter(r => r.status === 'accepted');
+        const list = document.getElementById('contactsList');
+        if (!accepted.length) {
+          list.innerHTML = '<div class="no-contacts">No connections yet.<br><br>Accept requests to start chatting! 👋</div>';
+          return;
+        }
+        list.innerHTML = '';
+        accepted.forEach(r => {
+          const initials = (r.sender_name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+          const div = document.createElement('div');
+          div.className = 'contact-item';
+          div.id = `contact-${r.sender_id}`;
+          div.innerHTML = `
+            <div class="contact-avatar">${initials}</div>
+            <div>
+              <div class="contact-name">${r.sender_name}</div>
+              <div class="contact-status">● Connected</div>
+            </div>`;
+          div.onclick = () => openChat(r.sender_id, r.sender_name);
+          list.appendChild(div);
+        });
+
+        // Auto-open from URL param
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('userId');
+        const uname = params.get('name');
+        if (uid) openChat(Number(uid), decodeURIComponent(uname||''));
+      } catch(e) {
+        document.getElementById('contactsList').innerHTML = '<div class="no-contacts">Could not load contacts.</div>';
+      }
+    };
+
+    function openChat(userId, userName) {
+      activeUserId = userId;
+      activeUserName = userName;
+      // Highlight active contact
+      document.querySelectorAll('.contact-item').forEach(c => c.classList.remove('active'));
+      const el = document.getElementById(`contact-${userId}`);
+      if (el) el.classList.add('active');
+
+      const initials = (userName||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      document.getElementById('chatWindow').innerHTML = `
+        <div class="chat-header">
+          <div class="chat-header-avatar">${initials}</div>
+          <div>
+            <div class="chat-header-name">${userName}</div>
+            <div class="chat-header-sub">● Connected roommate</div>
+          </div>
+        </div>
+        <div class="messages-box" id="msgBox"></div>
+        <div class="chat-input-bar">
+          <input type="text" id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+          <button class="send-btn" onclick="sendMsg()">➤</button>
+        </div>
+      `;
+      renderMessages(userId);
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => renderMessages(userId), 2000);
+    }
+
+    function renderMessages(userId) {
+      const box = document.getElementById('msgBox');
+      if (!box) return;
+      const msgs = getMsgs(userId);
+      const wasAtBottom = box.scrollHeight - box.scrollTop <= box.clientHeight + 40;
+      box.innerHTML = '';
+      if (!msgs.length) {
+        box.innerHTML = '<div style="text-align:center;color:rgba(206,147,216,0.5);font-size:13px;margin-top:30px">No messages yet. Say hello! 👋</div>';
+        return;
+      }
+      msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `msg ${m.from === me.id ? 'mine' : 'theirs'}`;
+        const t = new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        div.innerHTML = `<div class="msg-bubble">${escHtml(m.text)}</div><div class="msg-time">${t}</div>`;
+        box.appendChild(div);
+      });
+      if (wasAtBottom) box.scrollTop = box.scrollHeight;
+    }
+
+    function sendMsg() {
+      const input = document.getElementById('msgInput');
+      if (!input || !activeUserId) return;
+      const text = input.value.trim();
+      if (!text) return;
+      const msgs = getMsgs(activeUserId);
+      msgs.push({ from: me.id, to: activeUserId, text, ts: Date.now() });
+      saveMsgs(activeUserId, msgs);
+      input.value = '';
+      renderMessages(activeUserId);
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

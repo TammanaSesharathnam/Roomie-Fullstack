@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matching Profiles - Roomie Connect</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; min-height: 100vh; }
+
+        /* Sidebar - matches original */
+        .sidebar {
+            width: 250px; background-color: #6a1b9a;
+            padding: 20px; color: white; flex-shrink: 0; min-height: 100vh;
+        }
+        .sidebar .logo { text-align: center; margin-bottom: 30px; }
+        .sidebar .logo h2 { font-size: 24px; font-weight: bold; }
+        .sidebar .dashboard { list-style: none; padding: 0; }
+        .sidebar .dashboard li { margin-bottom: 15px; }
+        .sidebar .dashboard a {
+            color: white; text-decoration: none; font-size: 18px;
+            display: block; padding: 10px; transition: background-color 0.3s ease;
+            border-radius: 5px;
+        }
+        .sidebar .dashboard a:hover, .sidebar .dashboard a.active { background-color: #9c4dcc; }
+
+        /* Main content */
+        .main-content { flex-grow: 1; padding: 40px; background-color: #fff; }
+        header { margin-bottom: 24px; }
+        header h1 { font-size: 32px; color: #6a1b9a; margin-bottom: 6px; }
+        header p { font-size: 16px; color: #666; }
+
+        /* Filter bar */
+        .filter-bar {
+            background: #f0e6f6; border-radius: 10px; padding: 18px 20px;
+            margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 700; color: #6a0dad; text-transform: uppercase; }
+        .filter-group select, .filter-group input {
+            padding: 8px 12px; border: 1.5px solid #ce93d8;
+            border-radius: 6px; font-size: 13px; color: #333;
+            background: white; min-width: 130px;
+        }
+        .filter-btn {
+            padding: 9px 22px; background: #6a0dad; color: white;
+            border: none; border-radius: 6px; font-size: 14px;
+            font-weight: 600; cursor: pointer; align-self: flex-end;
+        }
+        .filter-btn:hover { background: #9c4dcc; }
+        .clear-btn {
+            padding: 9px 16px; background: transparent;
+            border: 1.5px solid #6a0dad; color: #6a0dad;
+            border-radius: 6px; font-size: 13px; cursor: pointer; align-self: flex-end;
+        }
+
+        /* Results count */
+        .results-count { font-size: 14px; color: #888; margin-bottom: 16px; }
+
+        /* Profile cards - matches original style */
+        .matching-profiles-list { display: grid; gap: 20px; }
+        .profile {
+            background-color: #f0e6f6; padding: 20px;
+            border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+        }
+        .profile-left { flex: 1; }
+        .profile h3 { color: #6a1b9a; font-size: 20px; margin-bottom: 8px; }
+        .profile p { color: #555; font-size: 14px; margin-bottom: 4px; }
+        .profile .preferences { margin-top: 8px; color: #888; font-size: 13px; }
+        .profile-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        .connect-btn {
+            background-color: #6a1b9a; color: white;
+            padding: 10px 20px; font-size: 14px; border: none;
+            cursor: pointer; border-radius: 5px; font-weight: 600;
+            transition: background 0.2s; white-space: nowrap;
+        }
+        .connect-btn:hover { background-color: #9c4dcc; }
+        .connect-btn.sent { background: #e0e0e0; color: #888; cursor: default; }
+        .connect-btn.sent:hover { background: #e0e0e0; }
+
+        /* Empty / loading */
+        .empty { text-align: center; padding: 60px 20px; color: #888; font-size: 16px; }
+        .loading { text-align: center; padding: 40px; color: #6a1b9a; font-size: 16px; }
+
+        /* Modal */
+        .modal-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none;
+            align-items: center; justify-content: center; z-index: 999;
+        }
+        .modal-bg.open { display: flex; }
+        .modal {
+            background: white; border-radius: 14px; padding: 28px;
+            max-width: 400px; width: 90%; text-align: center;
+        }
+        .modal h3 { color: #6a0dad; font-size: 20px; margin-bottom: 10px; }
+        .modal p { color: #555; font-size: 14px; margin-bottom: 18px; line-height: 1.6; }
+        .modal textarea {
+            width: 100%; padding: 10px; border: 1.5px solid #ce93d8;
+            border-radius: 8px; font-size: 14px; resize: none; margin-bottom: 14px;
+        }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns button { flex: 1; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-send { background: #6a0dad; color: white; border: none; }
+        .btn-send:hover { background: #9c4dcc; }
+        .btn-cancel { background: transparent; border: 1.5px solid #ccc; color: #666; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar - same as original -->
+    <div class="sidebar">
+        <div class="logo"><h2>Roomie Connect</h2></div>
+        <ul class="dashboard">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="p.html">My Profile</a></li>
+            <li><a href="profiles.html" class="active">Search Roommates</a></li>
+            <li><a href="requests.html">📩 Requests</a></li>
+            <li><a href="chat.html">💬 Chats</a></li>
+            <li><a href="index.html" onclick="logout()" style="color:#ffcdd2;">Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <h1>Matching Profiles</h1>
+            <p>Here are the profiles that match your selected filters.</p>
+        </header>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Gender</label>
+                <select id="f-gender">
+                    <option value="">Any</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Food</label>
+                <select id="f-diet">
+                    <option value="">Any</option>
+                    <option value="veg">Vegetarian</option>
+                    <option value="nonveg">Non-Veg</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Personality</label>
+                <select id="f-personality">
+                    <option value="">Any</option>
+                    <option value="introvert">Introvert</option>
+                    <option value="extrovert">Extrovert</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Schedule</label>
+                <select id="f-schedule">
+                    <option value="">Any</option>
+                    <option value="morningbird">Morning Bird</option>
+                    <option value="nightowl">Night Owl</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Location</label>
+                <input type="text" id="f-location" placeholder="City / Area">
+            </div>
+            <div class="filter-group">
+                <label>Max Budget (₹)</label>
+                <input type="number" id="f-budget" placeholder="e.g. 5000">
+            </div>
+            <button class="filter-btn" onclick="applyFilters()">Apply Filters</button>
+            <button class="clear-btn" onclick="clearFilters()">Clear</button>
+        </div>
+
+        <div class="results-count" id="resultsCount"></div>
+
+        <!-- Profiles list -->
+        <div id="matching-profiles" class="matching-profiles-list">
+            <div class="loading">Loading profiles...</div>
+        </div>
+    </div>
+
+    <!-- Send Request Modal -->
+    <div class="modal-bg" id="modalBg">
+        <div class="modal">
+            <h3>Send Request to <span id="modalName"></span></h3>
+            <p>Send a connection request. They can accept or reject it. If accepted, you can chat!</p>
+            <textarea id="modalMsg" rows="3" placeholder="Write a short message (optional)...">Hi! I found your profile and would love to connect as roommates.</textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-send" onclick="confirmSend()">📩 Send Request</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        let pendingUserId = null;
+
+        const labelMap = {
+            veg:'🥗 Vegetarian', nonveg:'🍗 Non-Veg',
+            introvert:'🎧 Introvert', extrovert:'🎉 Extrovert',
+            morningbird:'🌅 Morning Bird', nightowl:'🌙 Night Owl',
+            male:'Male', female:'Female', other:'Other'
+        };
+
+        // Read filters from URL params (from original home.html filter form)
+        window.onload = function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('filters')) {
+                const f = params.get('filters').split(',');
+                f.forEach(val => {
+                    if (['male','female'].includes(val)) document.getElementById('f-gender').value = val;
+                    if (['veg','nonveg'].includes(val)) document.getElementById('f-diet').value = val;
+                    if (['introvert','extrovert'].includes(val)) document.getElementById('f-personality').value = val;
+                    if (['morningbird','nightowl'].includes(val)) document.getElementById('f-schedule').value = val;
+                });
+            }
+            applyFilters();
+        };
+
+        async function applyFilters() {
+            const area = document.getElementById('matching-profiles');
+            area.innerHTML = '<div class="loading">Searching...</div>';
+            document.getElementById('resultsCount').textContent = '';
+
+            const params = {};
+            const g = document.getElementById('f-gender').value;
+            const d = document.getElementById('f-diet').value;
+            const p = document.getElementById('f-personality').value;
+            const s = document.getElementById('f-schedule').value;
+            const l = document.getElementById('f-location').value.trim();
+            const b = document.getElementById('f-budget').value;
+            if (g) params.gender = g;
+            if (d) params.diet = d;
+            if (p) params.personality = p;
+            if (s) params.schedule = s;
+            if (l) params.location = l;
+            if (b) params.maxBudget = b;
+
+            try {
+                const res = await api.searchRoommates(params);
+                const users = res.users;
+                document.getElementById('resultsCount').textContent = `${users.length} profile${users.length!==1?'s':''} found`;
+
+                if (!users.length) {
+                    area.innerHTML = '<div class="empty">😔 No matching profiles found.<br>Try adjusting your filters.</div>';
+                    return;
+                }
+
+                area.innerHTML = '';
+                users.forEach(u => {
+                    const badges = [u.diet, u.personality, u.schedule].filter(Boolean).map(b=>labelMap[b]||b).join(', ');
+                    const div = document.createElement('div');
+                    div.className = 'profile';
+                    div.innerHTML = `
+                        <div class="profile-left">
+                            <h3>${u.name}</h3>
+                            <p><strong>Gender:</strong> ${labelMap[u.gender]||u.gender||'—'} &nbsp;|&nbsp;
+                               <strong>Location:</strong> ${u.location||'—'} &nbsp;|&nbsp;
+                               <strong>Budget:</strong> ₹${(u.budget||0).toLocaleString()}/month</p>
+                            <p><strong>Email:</strong> <a href="mailto:${u.email}" style="color:#6a0dad">${u.email}</a></p>
+                            <div class="preferences"><strong>Preferences:</strong> ${badges||'—'}</div>
+                        </div>
+                        <div class="profile-right">
+                            <button class="connect-btn" id="btn-${u.id}" onclick="openModal(${u.id},'${u.name.replace(/'/g,"\\'")}')">
+                                📩 Connect
+                            </button>
+                        </div>
+                    `;
+                    area.appendChild(div);
+                });
+            } catch(err) {
+                // Fallback: show hardcoded users from original app if server not running
+                area.innerHTML = '<div class="empty">⚠️ Could not connect to server.<br>Make sure the server is running on port 3000.</div>';
+            }
+        }
+
+        function clearFilters() {
+            ['f-gender','f-diet','f-personality','f-schedule'].forEach(id => document.getElementById(id).value='');
+            document.getElementById('f-location').value = '';
+            document.getElementById('f-budget').value = '';
+            applyFilters();
+        }
+
+        function openModal(userId, userName) {
+            pendingUserId = userId;
+            document.getElementById('modalName').textContent = userName;
+            document.getElementById('modalMsg').value = 'Hi! I found your profile and would love to connect as roommates.';
+            document.getElementById('modalBg').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('modalBg').classList.remove('open');
+            pendingUserId = null;
+        }
+
+        async function confirmSend() {
+            if (!pendingUserId) return;
+            const msg = document.getElementById('modalMsg').value.trim();
+            const sendBtn = document.querySelector('.btn-send');
+            sendBtn.textContent = 'Sending...';
+            sendBtn.disabled = true;
+            try {
+                await api.sendContactRequest(pendingUserId, msg);
+                closeModal();
+                const btn = document.getElementById(`btn-${pendingUserId}`);
+                if (btn) { btn.textContent = '✅ Request Sent'; btn.classList.add('sent'); btn.disabled = true; }
+                alert('✅ Request sent! You will be notified when they accept.');
+            } catch(err) {
+                alert('Error: ' + err.message);
+            } finally {
+                sendBtn.textContent = '📩 Send Request';
+                sendBtn.disabled = false;
+            }
+        }
+
+        // Close modal on background click
+        document.getElementById('modalBg').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>

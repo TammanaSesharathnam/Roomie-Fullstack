@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roomie Connect - Requests</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); min-height: 100vh; display: flex; }
+    .sidebar { width: 220px; background: rgba(0,0,0,0.3); padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 100vh; flex-shrink: 0; }
+    .sidebar h2 { color: #fff; font-size: 18px; margin-bottom: 16px; text-align: center; }
+    .sidebar a { color: #e1bee7; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-size: 14px; display: block; transition: background 0.2s; }
+    .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; }
+    .main { flex: 1; padding: 24px; overflow-y: auto; }
+    h1 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+    .sub { color: #ce93d8; font-size: 13px; margin-bottom: 24px; }
+    .req-card { background: rgba(20,0,40,0.80); border-radius: 14px; padding: 20px; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; border: 1px solid rgba(255,255,255,0.08); }
+    .req-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+    .req-info { flex: 1; }
+    .req-name { font-size: 16px; font-weight: 600; margin-bottom: 3px; }
+    .req-details { font-size: 12px; color: #ce93d8; margin-bottom: 6px; }
+    .req-msg { font-size: 13px; color: #e1bee7; font-style: italic; }
+    .req-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-accept { padding: 8px 18px; background: #2e7d32; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-accept:hover { background: #388e3c; }
+    .btn-reject { padding: 8px 18px; background: transparent; border: 1.5px solid rgba(244,143,177,0.5); color: #f48fb1; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-reject:hover { background: rgba(244,143,177,0.1); }
+    .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-accepted { background: rgba(46,125,50,0.3); color: #a5d6a7; border: 1px solid rgba(165,214,167,0.3); }
+    .status-rejected { background: rgba(183,28,28,0.3); color: #ef9a9a; border: 1px solid rgba(239,154,154,0.3); }
+    .empty { text-align: center; color: #ce93d8; padding: 60px 20px; font-size: 15px; }
+    .loading { text-align: center; color: #ce93d8; padding: 40px; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>🏠 Roomie Connect</h2>
+    <a href="home.html">My Preferences</a>
+    <a href="profile.html">My Profile</a>
+    <a href="search.html">Find Roommates</a>
+    <a href="requests.html" class="active">📩 Requests</a>
+    <a href="chat.html">💬 Chats</a>
+    <a href="index.html" onclick="logout()" style="margin-top:auto;color:#f48fb1;">Logout</a>
+  </div>
+
+  <div class="main">
+    <h1>📩 Contact Requests</h1>
+    <p class="sub">People who want to connect with you as roommates</p>
+    <div id="requestsArea"><div class="loading">Loading requests...</div></div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    requireAuth();
+    const labelMap = {veg:'🥗 Veg',nonveg:'🍗 Non-Veg',introvert:'🎧 Introvert',extrovert:'🎉 Extrovert',morningbird:'🌅 Morning Bird',nightowl:'🌙 Night Owl',male:'👨 Male',female:'👩 Female'};
+
+    window.onload = async function() {
+      const area = document.getElementById('requestsArea');
+      try {
+        const res = await api.getContactRequests();
+        if (!res.requests.length) {
+          area.innerHTML = '<div class="empty">📭 No requests yet.<br>Share your profile with others or search for roommates!</div>';
+          return;
+        }
+        area.innerHTML = '';
+        res.requests.forEach(r => {
+          const initials = (r.sender_name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+          const badges = [r.gender,r.diet,r.personality,r.schedule].filter(Boolean).map(b=>labelMap[b]||b).join(' · ');
+          const div = document.createElement('div');
+          div.className = 'req-card';
+          div.id = `req-${r.id}`;
+
+          let actionsHtml = '';
+          if (r.status === 'pending') {
+            actionsHtml = `
+              <div class="req-actions">
+                <button class="btn-accept" onclick="respond(${r.id},'accepted','${r.sender_id}')">✅ Accept</button>
+                <button class="btn-reject" onclick="respond(${r.id},'rejected','')">❌ Reject</button>
+              </div>`;
+          } else if (r.status === 'accepted') {
+            actionsHtml = `<div class="req-actions"><span class="status-badge status-accepted">✅ Accepted</span><button class="btn-accept" onclick="goChat(${r.sender_id},'${r.sender_name}')" style="margin-left:6px;background:#7b1fa2">💬 Chat</button></div>`;
+          } else {
+            actionsHtml = `<div class="req-actions"><span class="status-badge status-rejected">❌ Rejected</span></div>`;
+          }
+
+          div.innerHTML = `
+            <div class="req-avatar">${initials}</div>
+            <div class="req-info">
+              <div class="req-name">${r.sender_name}</div>
+              <div class="req-details">📍 ${r.location||'—'} · 💰 ₹${(r.budget||0).toLocaleString()} · ${badges}</div>
+              ${r.message ? `<div class="req-msg">"${r.message}"</div>` : ''}
+            </div>
+            ${actionsHtml}
+          `;
+          area.appendChild(div);
+        });
+      } catch(err) {
+        area.innerHTML = `<div class="empty">❌ ${err.message}</div>`;
+      }
+    };
+
+    async function respond(reqId, status, senderId) {
+      try {
+        await api.respondToRequest(reqId, status);
+        const card = document.getElementById(`req-${reqId}`);
+        const actions = card.querySelector('.req-actions');
+        if (status === 'accepted') {
+          actions.innerHTML = `<span class="status-badge status-accepted">✅ Accepted</span><button class="btn-accept" onclick="goChat(${senderId},'')" style="margin-left:6px;background:#7b1fa2">💬 Chat</button>`;
+        } else {
+          actions.innerHTML = `<span class="status-badge status-rejected">❌ Rejected</span>`;
+        }
+      } catch(err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function goChat(userId, name) {
+      window.location.href = `chat.html?userId=${userId}&name=${encodeURIComponent(name)}`;
+    }
+  </script>
+</body>
+</html>

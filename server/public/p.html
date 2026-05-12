@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(#a87dc2, rgba(247,241,244,0.8)),
+                url('https://media.istockphoto.com/id/1291922442/vector/neighbors-keeping-pets-in-their-flats.jpg?s=612x612&w=0&k=20&c=UnezI5ZtzKlCFu99vrdUp1nNDaij-oqZSjMZHuEh1ic=') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .profile-container {
+            width: 90%;
+            max-width: 600px;
+            background: rgba(255,255,255,0.92);
+            border-radius: 16px;
+            padding: 36px 32px;
+            box-shadow: 0 8px 32px rgba(106,13,173,0.15);
+        }
+        .avatar {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg,#ce93d8,#6a0dad);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; font-weight: 700; color: #fff;
+            margin: 0 auto 16px;
+        }
+        h1 { text-align: center; font-size: 2rem; color: #000; margin-bottom: 24px; }
+        .profile-details { font-size: 1.1rem; line-height: 2; }
+        .profile-details p { border-bottom: 1px solid #f0e6f6; padding: 8px 0; }
+        .profile-details span { font-weight: bold; color: #6a0dad; margin-right: 8px; }
+        .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+        .badge {
+            padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            background: #f0e6f6; color: #6a0dad; border: 1px solid #ce93d8;
+        }
+        .btn {
+            display: block; width: 100%; padding: 12px;
+            background-color: #6a0dad; color: #fff;
+            font-size: 1rem; text-align: center; text-decoration: none;
+            border: none; border-radius: 8px; cursor: pointer; margin-top: 12px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #5a0ca0; }
+        .btn-outline {
+            background: transparent; border: 2px solid #6a0dad; color: #6a0dad;
+        }
+        .btn-outline:hover { background: #f0e6f6; }
+        .loading { text-align: center; color: #6a0dad; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="avatar" id="avatarEl">?</div>
+        <h1>Profile</h1>
+        <div id="profileDetails" class="profile-details">
+            <div class="loading">Loading your profile...</div>
+        </div>
+        <div class="badges" id="badgesEl"></div>
+        <a href="profiles.html" class="btn">🔍 Find Roommates</a>
+        <a href="form.html" class="btn btn-outline">✏️ Edit Preferences</a>
+        <a href="requests.html" class="btn" style="background:#9c4dcc;">📩 My Requests</a>
+        <a href="chat.html" class="btn" style="background:#7b1fa2;">💬 My Chats</a>
+        <a href="home.html" class="btn btn-outline" style="margin-top:8px;">🏠 Home</a>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        const labelMap = {
+            veg:'🥗 Vegetarian', nonveg:'🍗 Non-Veg',
+            male:'👨 Male', female:'👩 Female', other:'🧑 Other',
+            introvert:'🎧 Introvert', extrovert:'🎉 Extrovert',
+            morningbird:'🌅 Morning Bird', nightowl:'🌙 Night Owl'
+        };
+
+        window.onload = async function() {
+            const details = document.getElementById('profileDetails');
+            const badgesEl = document.getElementById('badgesEl');
+            const avatarEl = document.getElementById('avatarEl');
+
+            // First try server
+            try {
+                const res = await api.getMyProfile();
+                const u = res.user;
+                const initials = (u.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+                avatarEl.textContent = initials;
+                details.innerHTML = `
+                    <p><span>Name:</span> ${u.name||'—'}</p>
+                    <p><span>Email:</span> ${u.email||'—'}</p>
+                    <p><span>Gender:</span> ${u.gender ? u.gender.charAt(0).toUpperCase()+u.gender.slice(1) : '—'}</p>
+                    <p><span>Food Preference:</span> ${u.diet==='veg'?'Vegetarian':u.diet==='nonveg'?'Non-Vegetarian':'—'}</p>
+                    <p><span>Sleep Preference:</span> ${u.schedule==='morningbird'?'Morning Bird':u.schedule==='nightowl'?'Night Owl':'—'}</p>
+                    <p><span>Social Interaction:</span> ${u.personality ? u.personality.charAt(0).toUpperCase()+u.personality.slice(1) : '—'}</p>
+                    <p><span>Location:</span> ${u.location||'—'}</p>
+                    <p><span>Budget:</span> ${u.budget ? '₹'+Number(u.budget).toLocaleString()+'/month' : '—'}</p>
+                    ${u.bio ? `<p><span>Bio:</span> ${u.bio}</p>` : ''}
+                `;
+                const badges = [u.diet, u.personality, u.schedule].filter(Boolean);
+                badgesEl.innerHTML = badges.map(b=>`<span class="badge">${labelMap[b]||b}</span>`).join('');
+            } catch(e) {
+                // Fallback to localStorage (original app data)
+                const profileData = JSON.parse(localStorage.getItem('profile'));
+                if (profileData) {
+                    const initials = (profileData.name||'U').charAt(0).toUpperCase();
+                    avatarEl.textContent = initials;
+                    details.innerHTML = `
+                        <p><span>Name:</span> ${profileData.name}</p>
+                        <p><span>Gender:</span> ${profileData.gender}</p>
+                        <p><span>Food Preference:</span> ${profileData.food}</p>
+                        <p><span>Sleep Preference:</span> ${profileData.sleep}</p>
+                        <p><span>Social Interaction:</span> ${profileData.social}</p>
+                        <p><span>Cleanliness:</span> ${profileData.cleanliness}/5</p>
+                    `;
+                } else {
+                    details.innerHTML = '<p>No profile found. Please fill out preferences first.</p>';
+                }
+            }
+        };
+    </script>
+</body>
+</html>

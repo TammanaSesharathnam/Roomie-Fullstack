@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Roommates - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 14px; min-height: 100vh; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); display: flex; }
+        /* ── SHARED SIDEBAR ── */
+        .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: #6a1b9a; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar .brand { color: #fff; font-size: 16px; font-weight: 700; text-align: center; padding: 12px 2px 22px;  }
+        .sidebar a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 14px; display: block; padding: 10px 14px; border-radius: 8px; transition: background 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; }
+        .sidebar .logout { margin-top: auto; color: #f48fb1 !important; }
+        /* ── PAGE ── */
+        .main { flex: 1; padding: 30px 24px; overflow-y: auto; }
+        .page-title { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .sub { color: #ce93d8; font-size: 14px; margin-bottom: 20px; }
+        .filter-card { background: rgba(20,0,40,0.80); border-radius: 14px; padding: 20px; margin-bottom: 20px; color: #fff; }
+        .filter-label { font-size: 14px; font-weight: 700; color: #ce93d8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); font-size: 14px; cursor: pointer; transition: all 0.2s; background: transparent; }
+        .chip:hover { border-color: #ce93d8; }
+        .chip.on { background: rgba(206,147,216,0.3); border-color: #ce93d8; color: #fff; }
+        .filter-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .filter-inputs input { padding: 9px 12px; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 14px; color: #fff; width: 100%; }
+        .filter-inputs input::placeholder { color: rgba(255,255,255,0.4); }
+        .search-btn { padding: 10px 26px; background: #7b1fa2; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .search-btn:hover { background: #9c4dcc; }
+        .clear-btn { padding: 10px 16px; background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); border-radius: 8px; font-size: 14px; cursor: pointer; margin-left: 8px; }
+        .results-count { color: #ce93d8; font-size: 14px; margin-bottom: 14px; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .profile-card { background: rgba(20,0,40,0.82); border-radius: 14px; padding: 20px; color: #fff; border: 1px solid rgba(255,255,255,0.08); transition: transform 0.2s; }
+        .profile-card:hover { transform: translateY(-2px); border-color: rgba(206,147,216,0.3); }
+        .pc-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .pc-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .pc-loc { font-size: 14px; color: #ce93d8; margin-bottom: 10px; }
+        .pc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .pc-badge { font-size: 14px; padding: 3px 8px; border-radius: 10px; background: rgba(206,147,216,0.15); border: 1px solid rgba(206,147,216,0.3); color: rgba(255,255,255,0.75); }
+        .pc-budget { font-size: 14px; color: #a5d6a7; margin-bottom: 12px; }
+        .pc-btn { width: 100%; padding: 9px; background: #7b1fa2; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .pc-btn:hover { background: #9c4dcc; }
+        .pc-btn.sent { background: rgba(255,255,255,0.1); color: #ce93d8; cursor: default; }
+        .empty { text-align: center; color: #ce93d8; padding: 40px; font-size: 14px; }
+        /* Modal */
+        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:999; }
+        .modal-bg.open { display: flex; }
+        .modal { background: rgba(20,0,40,0.98); border: 1px solid rgba(206,147,216,0.3); border-radius: 14px; padding: 28px; max-width: 380px; width: 90%; color: #fff; }
+        .modal-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+        .modal p { color: #ce93d8; font-size: 14px; margin-bottom: 16px; line-height: 1.6; }
+        .modal textarea { width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 14px; color: #fff; resize: none; margin-bottom: 14px; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-send { background: #7b1fa2; color: #fff; border: none; }
+        .btn-send:hover { background: #9c4dcc; }
+        .btn-cancel { background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); }
+
+        /* ── MOBILE RESPONSIVE ── */
+        .topbar { display:none; background:#6a1b9a; padding:12px 16px; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .topbar .tbrand { color:#fff; font-size:15px; font-weight:700; }
+        .hamburger { background:none; border:none; cursor:pointer; padding:4px; display:flex; flex-direction:column; gap:5px; }
+        .hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+        .overlay.show { display:block; }
+        .app-body { display:flex; flex:1; min-height:0; }
+        @media (max-width:700px) {
+            body { flex-direction:column; }
+            .topbar { display:flex; }
+            .sidebar { position:fixed; top:0; left:0; height:100vh; transform:translateX(-100%); padding-top:56px; z-index:200; transition:transform 0.28s; min-height:unset; }
+            .sidebar.open { transform:translateX(0); box-shadow:4px 0 20px rgba(0,0,0,0.4); }
+            .app-body { flex:1; overflow:hidden; }
+            .main { width:100% !important; padding:14px !important; overflow-y:auto; }
+            .card { padding:18px !important; }
+            .grid { grid-template-columns:1fr !important; }
+            .form-row { grid-template-columns:1fr !important; }
+            .content { flex-direction:column !important; }
+            .results-panel { width:100% !important; max-width:100% !important; }
+            #map { min-height:260px !important; }
+            .filter-chips { gap:6px !important; }
+            .chip { font-size:13px !important; padding:7px 10px !important; }
+            .source-tabs { flex-wrap:wrap !important; gap:6px !important; }
+            .team-grid { grid-template-columns:1fr 1fr !important; }
+            .search-bar { flex-direction:column !important; }
+            .search-bar input, .search-bar select { width:100% !important; min-width:unset !important; }
+            .profiles-grid { grid-template-columns:1fr !important; }
+            .msg-input-row { flex-direction:row !important; }
+            .tab-bar { flex-wrap:nowrap !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile topbar -->
+    <div class="topbar">
+        <div class="tbrand">🏠 Roomie Connect</div>
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="app-body">
+    <div class="sidebar">
+        <div class="brand">🏠 Roomie Connect</div>
+        <a href="form.html">My Preferences</a>
+        <a href="p.html">My Profile</a>
+        <a href="profiles.html" class="active">Find Roommates</a>
+        <a href="requests.html">📩 Requests</a>
+        <a href="chat.html">💬 Chats</a>
+        <a href="map.html">🗺️ Hostel Map</a>
+        <a href="about.html">ℹ️ About</a>
+        <a href="index.html" class="logout" onclick="logout()">Logout</a>
+    </div>
+    <div class="main">
+        <div class="page-title">Find Roommates</div>
+        <div class="sub">Filter by your preferences to find compatible roommates</div>
+        <div class="filter-card">
+            <div class="filter-label">Filters</div>
+            <div class="filter-row">
+                <button class="chip" onclick="toggleChip(this,'gender','male')">👨 Male</button>
+                <button class="chip" onclick="toggleChip(this,'gender','female')">👩 Female</button>
+            </div>
+            <div class="filter-row">
+                <button class="chip" onclick="toggleChip(this,'diet','veg')">🥗 Veg</button>
+                <button class="chip" onclick="toggleChip(this,'diet','nonveg')">🍗 Non-Veg</button>
+            </div>
+            <div class="filter-row">
+                <button class="chip" onclick="toggleChip(this,'personality','introvert')">🎧 Introvert</button>
+                <button class="chip" onclick="toggleChip(this,'personality','extrovert')">🎉 Extrovert</button>
+            </div>
+            <div class="filter-row">
+                <button class="chip" onclick="toggleChip(this,'schedule','morningbird')">🌅 Morning Bird</button>
+                <button class="chip" onclick="toggleChip(this,'schedule','nightowl')">🌙 Night Owl</button>
+            </div>
+            <div class="filter-inputs">
+                <input type="text" id="f-location" placeholder="📍 Location">
+                <input type="number" id="f-minbudget" placeholder="₹ Min budget">
+                <input type="number" id="f-maxbudget" placeholder="₹ Max budget">
+            </div>
+            <button class="search-btn" onclick="doSearch()">🔍 Search</button>
+            <button class="clear-btn" onclick="clearFilters()">Clear</button>
+        </div>
+        <div class="results-count" id="resultsCount"></div>
+        <div id="resultsArea" class="results-grid"></div>
+    </div>
+    <div class="modal-bg" id="modalBg">
+        <div class="modal">
+            <div class="modal-title">Send Request to <span id="modalName"></span></div>
+            <p>Send a connection request. If accepted, you can chat!</p>
+            <textarea id="modalMsg" rows="3">Hi! I found your profile and would love to connect as roommates.</textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-send" onclick="confirmSend()">📩 Send Request</button>
+            </div>
+        </div>
+    </div>
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        const filters = { gender:null, diet:null, personality:null, schedule:null };
+        let pendingUserId = null;
+        const labelMap = { veg:'🥗 Veg', nonveg:'🍗 Non-Veg', introvert:'🎧 Introvert', extrovert:'🎉 Extrovert', morningbird:'🌅 Morning Bird', nightowl:'🌙 Night Owl' };
+        function toggleChip(el, field, value) {
+            el.closest('.filter-row').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+            filters[field] = filters[field]===value ? null : value;
+            if (filters[field]) el.classList.add('on');
+        }
+        function clearFilters() {
+            Object.keys(filters).forEach(k=>filters[k]=null);
+            document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+            document.getElementById('f-location').value='';
+            document.getElementById('f-minbudget').value='';
+            document.getElementById('f-maxbudget').value='';
+        }
+        async function doSearch() {
+            const area = document.getElementById('resultsArea');
+            area.innerHTML = '<div class="empty">Searching...</div>';
+            document.getElementById('resultsCount').textContent = '';
+            const params = {};
+            if (filters.gender) params.gender = filters.gender;
+            if (filters.diet) params.diet = filters.diet;
+            if (filters.personality) params.personality = filters.personality;
+            if (filters.schedule) params.schedule = filters.schedule;
+            const loc = document.getElementById('f-location').value.trim();
+            const minB = document.getElementById('f-minbudget').value;
+            const maxB = document.getElementById('f-maxbudget').value;
+            if (loc) params.location = loc;
+            if (minB) params.minBudget = minB;
+            if (maxB) params.maxBudget = maxB;
+            try {
+                const res = await api.searchRoommates(params);
+                document.getElementById('resultsCount').textContent = `${res.count} roommate${res.count!==1?'s':''} found`;
+                if (!res.users.length) { area.innerHTML = '<div class="empty">😔 No roommates found. Try adjusting your filters.</div>'; return; }
+                area.innerHTML = '';
+                res.users.forEach(u => {
+                    const initials = (u.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+                    const div = document.createElement('div');
+                    div.className = 'profile-card';
+                    div.innerHTML = `
+                        <div class="pc-avatar">${initials}</div>
+                        <div class="pc-name">${u.name}</div>
+                        <div class="pc-loc">📍 ${u.location||'Location not set'}</div>
+                        <div class="pc-badges">${[u.diet,u.personality,u.schedule].filter(Boolean).map(b=>`<span class="pc-badge">${labelMap[b]||b}</span>`).join('')}</div>
+                        <div class="pc-budget">💰 ₹${(u.budget||0).toLocaleString()}/month</div>
+                        <button class="pc-btn" id="btn-${u.id}" onclick="openModal(${u.id},'${(u.name||'').replace(/'/g,"\\'")}')">📩 Connect</button>`;
+                    area.appendChild(div);
+                });
+            } catch(err) { area.innerHTML = `<div class="empty">❌ ${err.message}</div>`; }
+        }
+        function openModal(userId, userName) {
+            pendingUserId = userId;
+            document.getElementById('modalName').textContent = userName;
+            document.getElementById('modalMsg').value = 'Hi! I found your profile and would love to connect as roommates.';
+            document.getElementById('modalBg').classList.add('open');
+        }
+        function closeModal() { document.getElementById('modalBg').classList.remove('open'); pendingUserId = null; }
+        async function confirmSend() {
+            if (!pendingUserId) return;
+            const sendBtn = document.querySelector('.btn-send');
+            sendBtn.textContent = 'Sending...'; sendBtn.disabled = true;
+            try {
+                await api.sendContactRequest(pendingUserId, document.getElementById('modalMsg').value.trim());
+                closeModal();
+                const btn = document.getElementById(`btn-${pendingUserId}`);
+                if (btn) { btn.textContent = '✅ Request Sent'; btn.classList.add('sent'); btn.disabled = true; }
+            } catch(err) { alert('Error: ' + err.message); }
+            finally { sendBtn.textContent = '📩 Send Request'; sendBtn.disabled = false; }
+        }
+        document.getElementById('modalBg').addEventListener('click', e => { if (e.target===document.getElementById('modalBg')) closeModal(); });
+        window.onload = doSearch;
+    </script>
+    </div><!-- end app-body -->
+
+    <script>
+    function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+    function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+    document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=700)closeSidebar();}));
+    </script>
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chats - Roomie Connect</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:Arial,sans-serif; font-size:14px; background:linear-gradient(135deg,#6a1b9a,#9c4dcc); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+        .topbar { display:none; background:#6a1b9a; padding:12px 16px; align-items:center; justify-content:space-between; flex-shrink:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .topbar .tbrand { color:#fff; font-size:15px; font-weight:700; }
+        .hamburger { background:none; border:none; cursor:pointer; padding:4px; display:flex; flex-direction:column; gap:5px; }
+        .hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+        .overlay.show { display:block; }
+        .app-body { display:flex; flex:1; min-height:0; }
+        .sidebar { width:220px; flex-shrink:0; background:#6a1b9a; padding:20px 14px; display:flex; flex-direction:column; gap:4px; z-index:200; transition:transform 0.28s; }
+        .sidebar .brand { color:#fff; font-size:16px; font-weight:700; text-align:center; padding:12px 2px 22px; }
+        .sidebar a { color:rgba(255,255,255,0.75); text-decoration:none; font-size:14px; display:block; padding:10px 14px; border-radius:8px; transition:background 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background:rgba(255,255,255,0.2); color:#fff; }
+        .sidebar .logout { margin-top:auto; color:#f48fb1 !important; }
+        .chat-area { flex:1; display:flex; min-width:0; }
+
+        /* Contacts */
+        .contacts-panel { width:260px; background:rgba(10,0,30,0.85); display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+        .contacts-header { padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,0.08); }
+        .contacts-header h3 { color:#fff; font-size:15px; font-weight:700; margin-bottom:8px; }
+        .search-contacts { width:100%; padding:8px 12px; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.12); border-radius:20px; font-size:13px; color:#fff; }
+        .search-contacts::placeholder { color:rgba(255,255,255,0.35); }
+        .search-contacts:focus { outline:none; border-color:#ce93d8; }
+        .contact-item { display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s; }
+        .contact-item:hover { background:rgba(206,147,216,0.12); }
+        .contact-item.active { background:rgba(206,147,216,0.2); border-left:3px solid #ce93d8; }
+        .c-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; flex-shrink:0; }
+        .c-info { flex:1; min-width:0; }
+        .c-name { color:#fff; font-size:14px; font-weight:600; }
+        .c-preview { color:rgba(255,255,255,0.4); font-size:12px; margin-top:2px; }
+        .no-contacts { padding:30px 14px; text-align:center; color:#ce93d8; font-size:14px; line-height:2; }
+
+        /* Chat window */
+        .chat-window { flex:1; display:flex; flex-direction:column; min-width:0; }
+        .no-chat-selected { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ce93d8; gap:12px; background:rgba(60,0,120,0.25); }
+        .chat-header { background:rgba(10,0,30,0.92); padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:12px; flex-shrink:0; }
+        .chat-header-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; flex-shrink:0; }
+        .chat-header-info { flex:1; }
+        .chat-header-name { color:#fff; font-size:14px; font-weight:700; }
+        .chat-header-sub { color:#a5d6a7; font-size:12px; margin-top:1px; }
+        .hdr-btn { padding:7px 13px; background:rgba(206,147,216,0.15); border:1px solid rgba(206,147,216,0.35); border-radius:20px; color:#ce93d8; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .hdr-btn:hover { background:rgba(206,147,216,0.3); color:#fff; }
+
+        /* Messages */
+        .messages-box { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; background:rgba(60,0,120,0.28); }
+        .messages-box::-webkit-scrollbar { width:4px; }
+        .messages-box::-webkit-scrollbar-thumb { background:rgba(206,147,216,0.3); border-radius:4px; }
+        .msg { max-width:72%; display:flex; flex-direction:column; }
+        .msg.mine { align-self:flex-end; align-items:flex-end; }
+        .msg.theirs { align-self:flex-start; align-items:flex-start; }
+        .msg-bubble { padding:10px 14px; border-radius:18px; font-size:14px; line-height:1.5; word-break:break-word; }
+        .msg.mine .msg-bubble { background:linear-gradient(135deg,#7b1fa2,#9c4dcc); color:#fff; border-bottom-right-radius:4px; box-shadow:0 2px 8px rgba(123,31,162,0.4); }
+        .msg.theirs .msg-bubble { background:rgba(255,255,255,0.12); color:#fff; border-bottom-left-radius:4px; border:1px solid rgba(255,255,255,0.08); }
+        .msg-time { font-size:11px; color:rgba(255,255,255,0.28); margin-top:3px; padding:0 4px; }
+        .date-div { text-align:center; color:rgba(255,255,255,0.28); font-size:11px; padding:6px 0; display:flex; align-items:center; gap:8px; }
+        .date-div::before, .date-div::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.08); }
+        .no-msgs { text-align:center; color:rgba(206,147,216,0.5); font-size:14px; margin:auto; line-height:2.2; }
+
+        /* Input */
+        .chat-input-bar { background:rgba(10,0,30,0.92); padding:11px 13px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:center; flex-shrink:0; }
+        .quiz-btn { width:38px; height:38px; border-radius:50%; background:rgba(206,147,216,0.15); border:1px solid rgba(206,147,216,0.3); color:#ce93d8; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .quiz-btn:hover { background:rgba(206,147,216,0.3); color:#fff; }
+        .msg-input { flex:1; padding:10px 16px; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.1); border-radius:22px; font-size:14px; color:#fff; }
+        .msg-input::placeholder { color:rgba(255,255,255,0.28); }
+        .msg-input:focus { outline:none; border-color:#ce93d8; }
+        .send-btn { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#7b1fa2,#9c4dcc); border:none; color:#fff; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .send-btn:hover { transform:scale(1.08); }
+
+        /* Quiz card in chat */
+        .quiz-card { max-width:310px; background:rgba(20,0,50,0.92); border:1px solid rgba(206,147,216,0.35); border-radius:16px; padding:16px; }
+        .quiz-card.mine { align-self:flex-end; }
+        .quiz-card.theirs { align-self:flex-start; }
+        .qc-title { font-size:13px; font-weight:700; color:#ce93d8; margin-bottom:8px; }
+        .qc-body { font-size:13px; color:#e1bee7; line-height:1.6; margin-bottom:10px; }
+        .qc-btn { width:100%; padding:8px; background:#7b1fa2; border:none; border-radius:8px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+        .qc-btn:hover { background:#9c4dcc; }
+
+        /* Result card in chat */
+        .result-msg { max-width:310px; background:rgba(20,0,50,0.92); border:1px solid rgba(206,147,216,0.35); border-radius:16px; padding:18px; text-align:center; }
+        .result-msg.mine { align-self:flex-end; }
+        .result-msg.theirs { align-self:flex-start; }
+        .res-emoji { font-size:34px; display:block; margin-bottom:4px; }
+        .res-score { font-size:40px; font-weight:700; color:#ce93d8; }
+        .res-label { font-size:14px; font-weight:700; color:#fff; margin:4px 0 8px; }
+        .res-desc { font-size:13px; color:#e1bee7; line-height:1.6; margin-bottom:12px; }
+        .res-breakdown { text-align:left; display:flex; flex-direction:column; gap:5px; }
+        .rb { display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:8px; font-size:12px; gap:8px; }
+        .rb-q { color:rgba(255,255,255,0.55); flex:1; }
+        .rb-right { display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+        .rb-a1 { color:#ce93d8; font-size:11px; }
+        .rb-a2 { color:#90caf9; font-size:11px; }
+        .rb-ok { color:#a5d6a7; font-size:11px; font-weight:700; }
+        .rb-no { color:#f48fb1; font-size:11px; font-weight:700; }
+
+        /* Quiz Modal */
+        .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:300; align-items:center; justify-content:center; padding:20px; }
+        .modal-bg.show { display:flex; }
+        .modal { background:rgba(18,0,45,0.98); border:1px solid rgba(206,147,216,0.3); border-radius:20px; padding:26px; width:100%; max-width:420px; }
+        .modal-title { font-size:16px; font-weight:700; color:#ce93d8; margin-bottom:4px; }
+        .modal-sub { font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px; }
+        .prog-bar { display:flex; gap:5px; margin-bottom:16px; }
+        .pb { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,0.12); transition:background 0.3s; }
+        .pb.done { background:#ce93d8; }
+        .pb.cur  { background:#7b1fa2; }
+        .q-txt { font-size:14px; font-weight:600; color:#fff; margin-bottom:14px; line-height:1.5; }
+        .q-opts { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+        .q-opt { padding:11px 15px; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; color:#e1bee7; font-size:14px; cursor:pointer; text-align:left; transition:all 0.2s; }
+        .q-opt:hover { background:rgba(206,147,216,0.12); border-color:rgba(206,147,216,0.35); color:#fff; }
+        .q-opt.sel { background:rgba(206,147,216,0.22); border-color:#ce93d8; color:#fff; font-weight:600; }
+        .modal-foot { display:flex; justify-content:space-between; align-items:center; }
+        .q-cnt { font-size:13px; color:rgba(255,255,255,0.3); }
+        .btn-nxt { padding:10px 22px; background:#7b1fa2; border:none; border-radius:10px; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+        .btn-nxt:disabled { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.3); cursor:not-allowed; }
+        .btn-nxt:not(:disabled):hover { background:#9c4dcc; }
+        .btn-cncl { padding:10px 16px; background:transparent; border:1.5px solid rgba(255,255,255,0.2); border-radius:10px; color:rgba(255,255,255,0.5); font-size:14px; cursor:pointer; }
+
+        /* Mobile */
+        .back-btn { display:none; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:16px; cursor:pointer; align-items:center; justify-content:center; flex-shrink:0; }
+        @media (max-width:700px) {
+            .topbar { display:flex; }
+            .sidebar { position:fixed; top:0; left:0; height:100vh; transform:translateX(-100%); padding-top:56px; min-height:unset; }
+            .sidebar.open { transform:translateX(0); box-shadow:4px 0 20px rgba(0,0,0,0.4); }
+            .contacts-panel { width:100%; position:absolute; top:0; left:0; height:100%; z-index:10; transition:transform 0.25s; }
+            .contacts-panel.hidden { transform:translateX(-100%); }
+            .back-btn { display:flex; }
+            .hdr-btn { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="tbrand">🏠 Roomie Connect</div>
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+    <div class="app-body">
+    <div class="sidebar">
+        <div class="brand">🏠 Roomie Connect</div>
+        <a href="form.html">My Preferences</a>
+        <a href="p.html">My Profile</a>
+        <a href="profiles.html">Find Roommates</a>
+        <a href="requests.html">📩 Requests</a>
+        <a href="chat.html" class="active">💬 Chats</a>
+        <a href="map.html">🗺️ Hostel Map</a>
+        <a href="about.html">ℹ️ About</a>
+        <a href="index.html" class="logout" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="chat-area">
+        <div class="contacts-panel" id="contactsPanel">
+            <div class="contacts-header">
+                <h3>💬 Messages</h3>
+                <input class="search-contacts" type="text" id="searchContacts" placeholder="🔍 Search..." oninput="filterContacts()">
+            </div>
+            <div id="contactsList"><div class="no-contacts">Loading...</div></div>
+        </div>
+
+        <div class="chat-window" id="chatWindow">
+            <div class="no-chat-selected">
+                <span style="font-size:52px">💬</span>
+                <span style="font-size:14px;color:#fff;font-weight:700">Select a conversation</span>
+                <span style="font-size:13px;color:#ce93d8">Your accepted connections appear on the left</span>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Quiz Modal -->
+    <div class="modal-bg" id="quizModal">
+        <div class="modal">
+            <div class="modal-title">🧩 Compatibility Quiz</div>
+            <div class="modal-sub" id="quizSub">Answer honestly to get your real score!</div>
+            <div class="prog-bar" id="progBar"></div>
+            <div class="q-txt" id="qTxt"></div>
+            <div class="q-opts" id="qOpts"></div>
+            <div class="modal-foot">
+                <span class="q-cnt" id="qCnt"></span>
+                <div style="display:flex;gap:8px">
+                    <button class="btn-cncl" onclick="closeQuiz()">Cancel</button>
+                    <button class="btn-nxt" id="btnNxt" onclick="nextQ()" disabled>Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+    requireAuth();
+    const me = getUser();
+    let activeUserId = null, activeUserName = null, pollTimer = null, lastCount = 0, allContacts = [];
+    let myAnswers = [], curQ = 0, waitingForOther = false;
+
+    const QUESTIONS = [
+        { q:"What time do you usually wake up?",           opts:["Before 6 AM 🌅","6–8 AM ☀️","8–10 AM 😴","After 10 AM 🌙"] },
+        { q:"How do you prefer to spend weekends?",        opts:["Staying home 🏠","Going out 🎉","Mix of both 🙂","Exploring places 🗺️"] },
+        { q:"How clean do you keep shared spaces?",        opts:["Spotless always ✨","Clean mostly 🧹","Fairly tidy 📦","I'll get to it 😅"] },
+        { q:"How do you feel about guests?",               opts:["No guests 🚫","Occasional ok 👍","Welcome anytime 🎊","Pre-informed only 📅"] },
+        { q:"What's your cooking/eating style?",           opts:["Cook daily 🍳","Order mostly 📱","Mix both 🍱","Eat outside 🍽️"] },
+        { q:"How do you handle noise at home?",            opts:["Complete silence 🤫","Low noise ok 🎵","Moderate ok 🔊","Noise fine 🎶"] },
+        { q:"How do you manage shared expenses?",          opts:["Split equally ➗","Pay own 💳","Take turns 🔄","Flexible 📊"] },
+        { q:"What's your work/study schedule?",            opts:["Early morning 🌅","Regular 9-5 💼","Evening 🌆","Night owl 🌙"] },
+        { q:"How do you handle home conflicts?",           opts:["Talk immediately 🗣️","Give time then talk ⏳","Avoid conflict 😶","Write notes 📝"] },
+        { q:"How do you feel about pets?",                 opts:["Love pets 🐾","Ok with others' 🙂","No pets 🚫","Depends 🤔"] },
+    ];
+
+    // ── CONTACTS ──────────────────────────────────────────────────
+    const COLORS = ['#7b1fa2','#1565c0','#2e7d32','#c62828','#e65100','#4527a0','#00695c'];
+    const getColor = id => COLORS[id % COLORS.length];
+    const getInit  = n  => (n||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+
+    async function loadContacts() {
+        const el = document.getElementById('contactsList');
+        try {
+            const res = await api.getConnections();
+            allContacts = res.connections || [];
+            if (!allContacts.length) { el.innerHTML='<div class="no-contacts">No connections yet.<br><br>Accept a request first! 👋</div>'; return; }
+            renderContacts(allContacts);
+            const p = new URLSearchParams(window.location.search);
+            const uid = Number(p.get('userId'));
+            if (uid) openChat(uid, decodeURIComponent(p.get('name')||'') || (allContacts.find(c=>c.user_id===uid)||{}).user_name||'');
+        } catch(e) { el.innerHTML='<div class="no-contacts">Could not load contacts.</div>'; }
+    }
+
+    function renderContacts(list) {
+        const el = document.getElementById('contactsList');
+        el.innerHTML = '';
+        list.forEach(c => {
+            const d = document.createElement('div');
+            d.className = 'contact-item'; d.id = `c-${c.user_id}`;
+            d.innerHTML = `<div class="c-avatar" style="background:${getColor(c.user_id)}">${getInit(c.user_name)}</div><div class="c-info"><div class="c-name">${c.user_name}</div><div class="c-preview">Tap to chat 💬</div></div>`;
+            d.onclick = () => openChat(c.user_id, c.user_name);
+            el.appendChild(d);
+        });
+    }
+
+    function filterContacts() {
+        const q = document.getElementById('searchContacts').value.toLowerCase();
+        renderContacts(allContacts.filter(c=>c.user_name.toLowerCase().includes(q)));
+    }
+
+    // ── OPEN CHAT ─────────────────────────────────────────────────
+    function openChat(uid, uname) {
+        if (pollTimer) clearInterval(pollTimer);
+        activeUserId = uid; activeUserName = uname; lastCount = 0;
+        document.querySelectorAll('.contact-item').forEach(c=>c.classList.remove('active'));
+        const el = document.getElementById(`c-${uid}`);
+        if (el) el.classList.add('active');
+
+        document.getElementById('chatWindow').innerHTML = `
+            <div class="chat-header">
+                <button class="back-btn" onclick="showContacts()">←</button>
+                <div class="chat-header-avatar" style="background:${getColor(uid)}">${getInit(uname)}</div>
+                <div class="chat-header-info">
+                    <div class="chat-header-name">${uname}</div>
+                    <div class="chat-header-sub">🟢 Connected roommate</div>
+                </div>
+                <button class="hdr-btn" onclick="startQuiz()">🧩 Quiz</button>
+            </div>
+            <div class="messages-box" id="msgBox"><div class="no-msgs">Loading...</div></div>
+            <div class="chat-input-bar">
+                <button class="quiz-btn" title="Compatibility Quiz" onclick="startQuiz()">🧩</button>
+                <input class="msg-input" type="text" id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+                <button class="send-btn" onclick="sendMsg()">➤</button>
+            </div>`;
+
+        if (window.innerWidth<=700) document.getElementById('contactsPanel').classList.add('hidden');
+        fetchMsgs(uid);
+        pollTimer = setInterval(()=>fetchMsgs(uid), 2000);
+    }
+
+    function showContacts() { document.getElementById('contactsPanel').classList.remove('hidden'); }
+
+    // ── MESSAGES ──────────────────────────────────────────────────
+    async function fetchMsgs(uid) {
+        if (activeUserId!==uid) return;
+        try {
+            const res = await api.getMessages(uid);
+            if (res.messages.length===lastCount) return;
+            lastCount = res.messages.length;
+            renderMsgs(res.messages);
+        } catch(e) {}
+    }
+
+    function renderMsgs(msgs) {
+        const box = document.getElementById('msgBox');
+        if (!box) return;
+        const atBot = box.scrollHeight - box.scrollTop <= box.clientHeight + 80;
+        if (!msgs.length) { box.innerHTML=`<div class="no-msgs">No messages yet.<br>Say hello 👋<br><br>Tap <strong style="color:#ce93d8">🧩</strong> to send a compatibility quiz!</div>`; return; }
+
+        box.innerHTML = '';
+        let lastDate = '';
+
+        // Collect all quiz answer messages
+        const quizMsgs = msgs.filter(m=>m.message.startsWith('__QUIZ_ANS__:'));
+        const myQuizMsg    = quizMsgs.find(m => m.sender_id === me.id);
+        const theirQuizMsg = quizMsgs.find(m => m.sender_id === activeUserId);
+        const bothAnswered = !!(myQuizMsg && theirQuizMsg);
+
+        msgs.forEach(m => {
+            const isMine = m.sender_id === me.id;
+            const d = new Date(m.created_at);
+            const ds = d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+            const ts = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+            if (ds!==lastDate) { lastDate=ds; const dd=document.createElement('div'); dd.className='date-div'; dd.textContent=ds; box.appendChild(dd); }
+
+            if (m.message.startsWith('__QUIZ_ANS__:')) {
+                renderQuizAns(box, m, isMine, ts, myQuizMsg, theirQuizMsg, bothAnswered);
+            } else if (m.message.startsWith('__QUIZ_INVITE__')) {
+                renderQuizInvite(box, m, isMine, ts);
+            } else {
+                const div = document.createElement('div');
+                div.className = `msg ${isMine?'mine':'theirs'}`;
+                div.innerHTML = `<div class="msg-bubble">${esc(m.message)}</div><div class="msg-time">${ts}</div>`;
+                box.appendChild(div);
+            }
+        });
+        if (atBot) box.scrollTop = box.scrollHeight;
+    }
+
+    function renderQuizInvite(box, m, isMine, ts) {
+        const div = document.createElement('div');
+        div.className = `quiz-card ${isMine?'mine':'theirs'}`;
+        if (isMine) {
+            div.innerHTML = `<div class="qc-title">🧩 You sent a Compatibility Quiz!</div><div class="qc-body">Waiting for <strong>${activeUserName}</strong> to answer...<br>They'll see an "Answer Quiz" button.</div><div class="msg-time" style="text-align:right;margin-top:6px">${ts}</div>`;
+        } else {
+            div.innerHTML = `<div class="qc-title">🧩 ${activeUserName} wants to check compatibility!</div><div class="qc-body">Answer the quiz to see your compatibility score with ${activeUserName}!</div><button class="qc-btn" onclick="startQuiz()">✍️ Answer Quiz Now</button><div class="msg-time" style="text-align:right;margin-top:6px">${ts}</div>`;
+        }
+        box.appendChild(div);
+    }
+
+    // Called for every __QUIZ_ANS__ message in chat
+    // myQuizMsg    = the current logged-in user's answer message (or null)
+    // theirQuizMsg = the other person's answer message (or null)
+    // bothAnswered = true when both have submitted answers
+    function renderQuizAns(box, m, isMine, ts, myQuizMsg, theirQuizMsg, bothAnswered) {
+        try {
+
+            // ── CASE 1: Only one person has answered ─────────────
+            if (!bothAnswered) {
+                const div = document.createElement('div');
+                div.className = `quiz-card ${isMine ? 'mine' : 'theirs'}`;
+                if (isMine) {
+                    // I answered — waiting for them
+                    div.innerHTML = `
+                        <div class="qc-title">🧩 You answered the Quiz!</div>
+                        <div class="qc-body">Waiting for <strong>${activeUserName}</strong> to answer...<br>They will see an ✍️ Answer Now button.</div>
+                        <div class="msg-time" style="text-align:right;margin-top:6px">${ts}</div>`;
+                } else {
+                    // They answered — prompt me to answer
+                    div.innerHTML = `
+                        <div class="qc-title">🧩 ${activeUserName} answered the Quiz!</div>
+                        <div class="qc-body">Your turn! Answer to see the compatibility result.</div>
+                        <button class="qc-btn" onclick="startQuiz()">✍️ Answer Now</button>
+                        <div class="msg-time" style="text-align:right;margin-top:6px">${ts}</div>`;
+                }
+                box.appendChild(div);
+                return;
+            }
+
+            // ── CASE 2: Both answered ─────────────────────────────
+            // Only render the FULL result card on the LATER message
+            // This avoids showing two result cards in the same chat
+            const myTime    = new Date(myQuizMsg.created_at).getTime();
+            const theirTime = new Date(theirQuizMsg.created_at).getTime();
+            const thisTime  = new Date(m.created_at).getTime();
+            const laterTime = Math.max(myTime, theirTime);
+
+            if (thisTime < laterTime) {
+                // This is the EARLIER answer message — show small "answered" pill
+                const div = document.createElement('div');
+                div.className = `quiz-card ${isMine ? 'mine' : 'theirs'}`;
+                div.innerHTML = `
+                    <div class="qc-title">🧩 ${isMine ? 'You' : activeUserName} answered the Quiz</div>
+                    <div class="qc-body" style="color:#a5d6a7">✅ Scroll down to see the result!</div>
+                    <div class="msg-time" style="text-align:right;margin-top:6px">${ts}</div>`;
+                box.appendChild(div);
+                return;
+            }
+
+            // ── This is the LATER answer — render FULL result ─────
+            // Parse both answer sets
+            const myAns    = JSON.parse(myQuizMsg.message.replace('__QUIZ_ANS__:', '')).answers;
+            const theirAns = JSON.parse(theirQuizMsg.message.replace('__QUIZ_ANS__:', '')).answers;
+
+            // Score
+            let match = 0;
+            const details = [];
+            const total = Math.min(myAns.length, theirAns.length);
+            for (let i = 0; i < total; i++) {
+                const matched = myAns[i]?.a === theirAns[i]?.a;
+                if (matched) match++;
+                details.push({
+                    q:      QUESTIONS[i]?.q   || myAns[i]?.q || `Q${i+1}`,
+                    opts:   QUESTIONS[i]?.opts || [],
+                    myA:    myAns[i]?.a    || '—',
+                    theirA: theirAns[i]?.a || '—',
+                    matched
+                });
+            }
+            const score = Math.round((match / total) * 100);
+            const { emoji, label, desc } = getResult(score);
+
+            // Per-question breakdown — all 4 options with colour coding
+            const breakdownHTML = details.map((d, qi) => {
+                const optHTML = d.opts.map(opt => {
+                    const iGot    = opt === d.myA;
+                    const theyGot = opt === d.theirA;
+                    let bg = 'rgba(255,255,255,0.04)';
+                    let border = '1px solid rgba(255,255,255,0.08)';
+                    let badge = '';
+
+                    if (iGot && theyGot) {
+                        bg = 'rgba(76,175,80,0.28)';
+                        border = '2px solid #4caf50';
+                        badge = '<span style="margin-left:auto;font-size:10px;background:#4caf50;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap">✅ Both</span>';
+                    } else if (iGot) {
+                        bg = 'rgba(156,77,204,0.28)';
+                        border = '2px solid #ce93d8';
+                        badge = '<span style="margin-left:auto;font-size:10px;background:#7b1fa2;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap">🙋 You</span>';
+                    } else if (theyGot) {
+                        bg = 'rgba(21,101,192,0.28)';
+                        border = '2px solid #90caf9';
+                        badge = `<span style="margin-left:auto;font-size:10px;background:#1565c0;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap">👤 ${activeUserName.split(' ')[0]}</span>`;
+                    }
+
+                    return `<div style="padding:8px 10px;margin:3px 0;border-radius:8px;border:${border};background:${bg};font-size:11.5px;color:#fff;display:flex;align-items:center;gap:6px;">
+                        <span style="flex:1">${opt}</span>${badge}
+                    </div>`;
+                }).join('');
+
+                const qCol  = d.matched ? '#a5d6a7' : '#f48fb1';
+                const qIcon = d.matched ? '✅' : '❌';
+                return `<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);">
+                    <div style="font-size:12px;font-weight:700;color:#ce93d8;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                        <span>Q${qi+1}. ${d.q}</span>
+                        <span style="font-size:15px">${qIcon}</span>
+                    </div>
+                    ${optHTML}
+                </div>`;
+            }).join('');
+
+            const legend = `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:10px 0 16px;font-size:11px;color:#ccc;">
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#4caf50;margin-right:4px;vertical-align:middle"></span>Both picked</span>
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#9c4dcc;margin-right:4px;vertical-align:middle"></span>You picked</span>
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#1565c0;margin-right:4px;vertical-align:middle"></span>${activeUserName.split(' ')[0]} picked</span>
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,0.12);margin-right:4px;vertical-align:middle"></span>Neither</span>
+            </div>`;
+
+            const div = document.createElement('div');
+            div.className = 'result-msg';
+            div.style.cssText = 'align-self:center;max-width:460px;width:100%;margin:8px auto;';
+            div.innerHTML = `
+                <div style="text-align:center;font-size:13px;color:#ce93d8;font-weight:700;margin-bottom:10px;letter-spacing:0.3px;">
+                    🧩 Compatibility Result — You &amp; ${activeUserName}
+                </div>
+                <span class="res-emoji">${emoji}</span>
+                <div class="res-score">${score}%</div>
+                <div class="res-label">${label}</div>
+                <div class="res-desc">${desc}</div>
+                ${legend}
+                ${breakdownHTML}
+                <div class="msg-time" style="text-align:center;margin-top:10px;color:#888;font-size:11px">${ts}</div>`;
+            box.appendChild(div);
+
+        } catch(e) { console.error('Quiz render error:', e); }
+    }
+
+        function getResult(score) {
+        if (score>=85) return { emoji:'🌟', label:'Excellent Match!',    desc:'You two are highly compatible! Very similar habits — living together should be smooth and comfortable.' };
+        if (score>=70) return { emoji:'✅', label:'Great Compatibility', desc:'You share most lifestyle habits. A few small differences but nothing that can\'t be worked out!' };
+        if (score>=55) return { emoji:'👍', label:'Good Match',          desc:'You have several things in common. Be open about differences and set clear expectations.' };
+        if (score>=40) return { emoji:'🤝', label:'Worth a Try',         desc:'You have different styles in some areas. Discuss boundaries before moving in together.' };
+        return           { emoji:'💬', label:'Different Lifestyles',    desc:'Quite different habits. This can work with compromise — have a detailed conversation first.' };
+    }
+
+    async function sendMsg() {
+        const input = document.getElementById('msgInput');
+        if (!input||!activeUserId) return;
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        try {
+            await api.sendMessage(activeUserId, text);
+            lastCount++;
+            const box = document.getElementById('msgBox');
+            const nm = box.querySelector('.no-msgs'); if (nm) nm.remove();
+            const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            const div = document.createElement('div'); div.className='msg mine';
+            div.innerHTML=`<div class="msg-bubble">${esc(text)}</div><div class="msg-time">${t}</div>`;
+            box.appendChild(div); box.scrollTop=box.scrollHeight;
+        } catch(e) { input.value=text; }
+    }
+
+    // ── QUIZ ──────────────────────────────────────────────────────
+    function startQuiz() {
+        if (!activeUserId) return;
+        myAnswers = []; curQ = 0;
+        document.getElementById('quizSub').textContent = `Quiz with ${activeUserName} — answer honestly!`;
+        renderQ();
+        document.getElementById('quizModal').classList.add('show');
+    }
+
+    function renderQ() {
+        const q   = QUESTIONS[curQ];
+        const btn = document.getElementById('btnNxt');
+        document.getElementById('progBar').innerHTML = QUESTIONS.map((_,i)=>`<div class="pb ${i<curQ?'done':i===curQ?'cur':''}"></div>`).join('');
+        document.getElementById('qTxt').textContent  = `Q${curQ+1}. ${q.q}`;
+        document.getElementById('qCnt').textContent  = `${curQ+1} / ${QUESTIONS.length}`;
+        btn.textContent = curQ===QUESTIONS.length-1 ? '✅ Submit' : 'Next →';
+        btn.disabled    = !myAnswers[curQ];
+        const opts = document.getElementById('qOpts');
+        opts.innerHTML = '';
+        q.opts.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'q-opt' + (myAnswers[curQ]?.a===opt?' sel':'');
+            b.textContent = opt;
+            b.onclick = () => {
+                opts.querySelectorAll('.q-opt').forEach(o=>o.classList.remove('sel'));
+                b.classList.add('sel');
+                myAnswers[curQ] = { q:q.q, a:opt };
+                btn.disabled = false;
+            };
+            opts.appendChild(b);
+        });
+    }
+
+    function nextQ() {
+        if (curQ < QUESTIONS.length-1) { curQ++; renderQ(); }
+        else submitQuiz();
+    }
+
+    async function submitQuiz() {
+        closeQuiz();
+        try {
+            // Send invite message if this is the first quiz
+            const existing = await api.getMessages(activeUserId);
+            const hasInvite = existing.messages.some(m=>m.message==='__QUIZ_INVITE__');
+            if (!hasInvite) {
+                await api.sendMessage(activeUserId, '__QUIZ_INVITE__');
+                lastCount++;
+            }
+            // Send my answers
+            const payload = JSON.stringify({ answers: myAnswers, total: QUESTIONS.length });
+            await api.sendMessage(activeUserId, `__QUIZ_ANS__:${payload}`);
+            lastCount++;
+            fetchMsgs(activeUserId);
+        } catch(e) { alert('Error: '+e.message); }
+    }
+
+    function closeQuiz() { document.getElementById('quizModal').classList.remove('show'); }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+    function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+    document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=700)closeSidebar();}));
+    window.onload = loadContacts;
+    </script>
+</body>
+</html>

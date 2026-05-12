@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Roomie Connect - Diagnosis</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #6a1b9a, #9c4dcc); min-height: 100vh; padding: 30px; }
+        .card { background: rgba(20,0,40,0.90); border-radius: 16px; padding: 28px; max-width: 700px; margin: 0 auto; color: #fff; }
+        h2 { font-size: 16px; color: #ce93d8; margin-bottom: 20px; }
+        .test { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+        .test-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+        .result { font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-top: 8px; word-break: break-all; line-height: 1.6; }
+        .ok    { background: rgba(76,175,80,0.2);  border: 1px solid #4caf50; color: #a5d6a7; }
+        .fail  { background: rgba(244,67,54,0.2);  border: 1px solid #f44336; color: #ef9a9a; }
+        .info  { background: rgba(33,150,243,0.2); border: 1px solid #2196f3; color: #90caf9; }
+        .warn  { background: rgba(255,193,7,0.2);  border: 1px solid #ffc107; color: #ffe082; }
+        .wait  { background: rgba(255,255,255,0.1); color: #ccc; }
+        button { padding: 10px 22px; background: #7b1fa2; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 8px; margin-top: 6px; }
+        button:hover { background: #9c4dcc; }
+        input { padding: 9px 12px; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 13px; color: #fff; width: 220px; margin-right: 8px; }
+        input::placeholder { color: rgba(255,255,255,0.4); }
+        .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+        .fix { font-size: 12px; color: #ffe082; margin-top: 6px; padding: 6px 10px; background: rgba(255,193,7,0.1); border-radius: 6px; border-left: 3px solid #ffc107; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>🔧 Roomie Connect — Login Diagnosis Tool</h2>
+
+    <!-- TEST 1: Server Running -->
+    <div class="test">
+        <div class="test-title">1. Is the server running?</div>
+        <button onclick="testServer()">Test Server</button>
+        <div class="result wait" id="r1">Click to test...</div>
+    </div>
+
+    <!-- TEST 2: Database -->
+    <div class="test">
+        <div class="test-title">2. Is the database connected?</div>
+        <button onclick="testDB()">Test Database</button>
+        <div class="result wait" id="r2">Click to test...</div>
+    </div>
+
+    <!-- TEST 3: Login -->
+    <div class="test">
+        <div class="test-title">3. Test Login with your credentials</div>
+        <div class="row">
+            <input type="email" id="email" placeholder="your email" value="23b01a05j5@svecw.edu.in">
+            <input type="password" id="password" placeholder="your password">
+            <button onclick="testLogin()">Test Login</button>
+        </div>
+        <div class="result wait" id="r3">Enter credentials and click Test Login...</div>
+    </div>
+
+    <!-- TEST 4: Register a fresh test user -->
+    <div class="test">
+        <div class="test-title">4. Register a NEW test user (if login fails)</div>
+        <div class="row">
+            <input type="email" id="regEmail" placeholder="test@test.com" value="test@test.com">
+            <input type="password" id="regPass" placeholder="password123" value="password123">
+            <button onclick="testRegister()">Register Test User</button>
+        </div>
+        <div class="result wait" id="r4">Click to register a test user...</div>
+    </div>
+
+    <!-- TEST 5: What error exactly -->
+    <div class="test">
+        <div class="test-title">5. Full error details (check browser console too)</div>
+        <button onclick="fullTest()">Run Full Diagnosis</button>
+        <div class="result wait" id="r5">Click to run full diagnosis...</div>
+    </div>
+</div>
+
+<script>
+const BASE = 'http://localhost:3000/api';
+
+async function testServer() {
+    const el = document.getElementById('r1');
+    el.className = 'result wait'; el.textContent = 'Testing...';
+    try {
+        const res = await fetch(BASE + '/health', { signal: AbortSignal.timeout(5000) });
+        const data = await res.json();
+        el.className = 'result ok';
+        el.textContent = '✅ Server is RUNNING! ' + data.message;
+    } catch(e) {
+        el.className = 'result fail';
+        el.innerHTML = '❌ Server NOT reachable: ' + e.message +
+            '<div class="fix">FIX: Open PowerShell, go to roomie-fullstack/server folder and run: <strong>node server.js</strong><br>Make sure you see: 🚀 Roomie Connect Server running on http://localhost:3000</div>';
+    }
+}
+
+async function testDB() {
+    const el = document.getElementById('r2');
+    el.className = 'result wait'; el.textContent = 'Testing...';
+    try {
+        const res = await fetch(BASE + '/health', { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+            el.className = 'result info';
+            el.innerHTML = 'ℹ️ Server reached. To confirm DB: check your PowerShell window where server is running.<br>Look for: <strong>✅ MySQL Database connected successfully</strong><br>If you see <strong>❌ Database connection failed</strong>, check your .env password.';
+        }
+    } catch(e) {
+        el.className = 'result fail';
+        el.textContent = '❌ Cannot reach server to check DB. Start the server first (Test 1).';
+    }
+}
+
+async function testLogin() {
+    const el = document.getElementById('r3');
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!email || !password) { el.className='result warn'; el.textContent='⚠️ Enter email and password first.'; return; }
+    el.className = 'result wait'; el.textContent = 'Logging in...';
+    try {
+        const res = await fetch(BASE + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            el.className = 'result ok';
+            el.innerHTML = '✅ LOGIN WORKS! Token received.<br>User: ' + data.user.name + ' (' + data.user.email + ')<br><strong>Your login is working! The issue may be in how the page calls the server.</strong>';
+            // Save to session for testing
+            sessionStorage.setItem('rc_token', data.token);
+            sessionStorage.setItem('rc_user', JSON.stringify(data.user));
+        } else {
+            el.className = 'result fail';
+            el.innerHTML = '❌ Login failed: <strong>' + data.message + '</strong>' + getLoginFix(data.message);
+        }
+    } catch(e) {
+        el.className = 'result fail';
+        el.innerHTML = '❌ Network error: ' + e.message +
+            '<div class="fix">FIX: Server is not running or wrong port. Start with <strong>node server.js</strong></div>';
+    }
+}
+
+function getLoginFix(msg) {
+    if (msg && msg.includes('Invalid email')) return '<div class="fix">FIX: This email is NOT in the database. Either register first, OR your database seed data was not inserted. Run the schema.sql again in MySQL Workbench.</div>';
+    if (msg && msg.includes('password')) return '<div class="fix">FIX: Wrong password. Try registering a new account with Test 4 below.</div>';
+    if (msg && msg.includes('Server error')) return '<div class="fix">FIX: Database query failed. Check MySQL is running and the table structure matches schema.sql</div>';
+    return '';
+}
+
+async function testRegister() {
+    const el = document.getElementById('r4');
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPass').value.trim();
+    el.className = 'result wait'; el.textContent = 'Registering...';
+    try {
+        const res = await fetch(BASE + '/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'Test User', email, password,
+                gender: 'female', diet: 'veg',
+                personality: 'introvert', schedule: 'morningbird',
+                location: 'bhimavaram', budget: 5000
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            el.className = 'result ok';
+            el.innerHTML = '✅ REGISTERED! Now go to <a href="index.html" style="color:#ce93d8">index.html</a> and login with: <strong>' + email + ' / ' + password + '</strong>';
+        } else {
+            el.className = 'result warn';
+            el.innerHTML = '⚠️ ' + data.message + (data.message.includes('already') ? ' — just use this email to login above!' : '');
+        }
+    } catch(e) {
+        el.className = 'result fail';
+        el.textContent = '❌ ' + e.message;
+    }
+}
+
+async function fullTest() {
+    const el = document.getElementById('r5');
+    el.className = 'result wait'; el.textContent = 'Running...';
+    let report = '';
+
+    // Step 1: server
+    try {
+        const res = await fetch(BASE + '/health', { signal: AbortSignal.timeout(3000) });
+        const d = await res.json();
+        report += '✅ Server: ONLINE\n';
+    } catch(e) {
+        report += '❌ Server: OFFLINE — ' + e.message + '\n   → Run: cd roomie-fullstack/server && node server.js\n\n';
+        el.className = 'result fail';
+        el.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px">' + report + '</pre>';
+        return;
+    }
+
+    // Step 2: login
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (email && password) {
+        try {
+            const res = await fetch(BASE + '/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const d = await res.json();
+            if (d.success) {
+                report += '✅ Login: SUCCESS — Welcome ' + d.user.name + '\n';
+                // Test profile fetch
+                try {
+                    const pr = await fetch(BASE + '/users/profile', { headers: { Authorization: 'Bearer ' + d.token } });
+                    const pd = await pr.json();
+                    report += pd.success ? '✅ Profile fetch: SUCCESS\n' : '❌ Profile fetch: ' + pd.message + '\n';
+                } catch(e) { report += '❌ Profile fetch: ' + e.message + '\n'; }
+                // Test search
+                try {
+                    const sr = await fetch(BASE + '/users/search', { headers: { Authorization: 'Bearer ' + d.token } });
+                    const sd = await sr.json();
+                    report += sd.success ? '✅ Search: SUCCESS — ' + sd.count + ' users found\n' : '❌ Search: ' + sd.message + '\n';
+                } catch(e) { report += '❌ Search: ' + e.message + '\n'; }
+            } else {
+                report += '❌ Login: FAILED — ' + d.message + '\n';
+                report += '   → This means the user does not exist in the DB, or wrong password\n';
+                report += '   → Use Test 4 to register a new account\n';
+            }
+        } catch(e) { report += '❌ Login error: ' + e.message + '\n'; }
+    } else {
+        report += '⚠️  Skipped login test — enter credentials in Test 3 above\n';
+    }
+
+    el.className = 'result info';
+    el.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px">' + report + '</pre>';
+}
+
+// Auto-run server test on load
+window.onload = () => setTimeout(testServer, 300);
+</script>
+</body>
+</html>

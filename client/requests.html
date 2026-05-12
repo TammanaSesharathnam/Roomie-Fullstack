@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requests - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 14px; min-height: 100vh; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); display: flex; }
+        /* ── SHARED SIDEBAR ── */
+        .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: #6a1b9a; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar .brand { color: #fff; font-size: 16px; font-weight: 700; text-align: center; padding: 12px 2px 22px;  }
+        .sidebar a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 14px; display: block; padding: 10px 14px; border-radius: 8px; transition: background 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; }
+        .sidebar .logout { margin-top: auto; color: #f48fb1 !important; }
+        /* ── PAGE ── */
+        .main { flex: 1; padding: 30px 24px; overflow-y: auto; }
+        .page-title { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .sub { color: #ce93d8; font-size: 14px; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab { padding: 9px 22px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; transition: all 0.2s; }
+        .tab.active { background: rgba(206,147,216,0.2); border-color: #ce93d8; color: #fff; }
+        .req-card { background: rgba(20,0,40,0.82); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; color: #fff; border: 1px solid rgba(255,255,255,0.07); }
+        .req-avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+        .req-info { flex: 1; }
+        .req-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+        .req-details { font-size: 14px; color: #ce93d8; margin-bottom: 4px; }
+        .req-msg { font-size: 14px; color: rgba(255,255,255,0.75); font-style: italic; }
+        .req-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .btn-accept { padding: 8px 16px; background: #2e7d32; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-accept:hover { background: #388e3c; }
+        .btn-reject { padding: 8px 16px; background: rgba(255,255,255,0.1); color: #f48fb1; border: 1px solid rgba(244,143,177,0.4); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-chat { padding: 8px 16px; background: #7b1fa2; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-chat:hover { background: #9c4dcc; }
+        .badge-accepted { padding: 6px 12px; background: rgba(46,125,50,0.2); border: 1px solid #4caf50; color: #a5d6a7; border-radius: 8px; font-size: 14px; font-weight: 600; }
+        .badge-rejected { padding: 6px 12px; background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.3); color: #ef9a9a; border-radius: 8px; font-size: 14px; }
+        .badge-pending { padding: 6px 12px; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); color: #ffe082; border-radius: 8px; font-size: 14px; }
+        .empty { text-align: center; color: #ce93d8; padding: 40px; font-size: 14px; line-height: 1.8; }
+
+        /* ── MOBILE RESPONSIVE ── */
+        .topbar { display:none; background:#6a1b9a; padding:12px 16px; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .topbar .tbrand { color:#fff; font-size:15px; font-weight:700; }
+        .hamburger { background:none; border:none; cursor:pointer; padding:4px; display:flex; flex-direction:column; gap:5px; }
+        .hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+        .overlay.show { display:block; }
+        .app-body { display:flex; flex:1; min-height:0; }
+        @media (max-width:700px) {
+            body { flex-direction:column; }
+            .topbar { display:flex; }
+            .sidebar { position:fixed; top:0; left:0; height:100vh; transform:translateX(-100%); padding-top:56px; z-index:200; transition:transform 0.28s; min-height:unset; }
+            .sidebar.open { transform:translateX(0); box-shadow:4px 0 20px rgba(0,0,0,0.4); }
+            .app-body { flex:1; overflow:hidden; }
+            .main { width:100% !important; padding:14px !important; overflow-y:auto; }
+            .card { padding:18px !important; }
+            .grid { grid-template-columns:1fr !important; }
+            .form-row { grid-template-columns:1fr !important; }
+            .content { flex-direction:column !important; }
+            .results-panel { width:100% !important; max-width:100% !important; }
+            #map { min-height:260px !important; }
+            .filter-chips { gap:6px !important; }
+            .chip { font-size:13px !important; padding:7px 10px !important; }
+            .source-tabs { flex-wrap:wrap !important; gap:6px !important; }
+            .team-grid { grid-template-columns:1fr 1fr !important; }
+            .search-bar { flex-direction:column !important; }
+            .search-bar input, .search-bar select { width:100% !important; min-width:unset !important; }
+            .profiles-grid { grid-template-columns:1fr !important; }
+            .msg-input-row { flex-direction:row !important; }
+            .tab-bar { flex-wrap:nowrap !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile topbar -->
+    <div class="topbar">
+        <div class="tbrand">🏠 Roomie Connect</div>
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="app-body">
+    <div class="sidebar">
+        <div class="brand">🏠 Roomie Connect</div>
+        <a href="form.html">My Preferences</a>
+        <a href="p.html">My Profile</a>
+        <a href="profiles.html">Find Roommates</a>
+        <a href="requests.html" class="active">📩 Requests</a>
+        <a href="chat.html">💬 Chats</a>
+        <a href="map.html">🗺️ Hostel Map</a>
+        <a href="about.html">ℹ️ About</a>
+        <a href="index.html" class="logout" onclick="logout()">Logout</a>
+    </div>
+    <div class="main">
+        <div class="page-title">📩 Contact Requests</div>
+        <div class="sub">Manage roommate connection requests</div>
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('incoming',this)">📨 Incoming</button>
+            <button class="tab" onclick="showTab('sent',this)">📤 Sent</button>
+        </div>
+        <div id="incomingArea"></div>
+        <div id="sentArea" style="display:none"></div>
+    </div>
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        const labelMap = { veg:'🥗 Veg', nonveg:'🍗 Non-Veg', introvert:'🎧 Introvert', extrovert:'🎉 Extrovert', morningbird:'🌅 Morning Bird', nightowl:'🌙 Night Owl', male:'👨 Male', female:'👩 Female' };
+        function showTab(tab, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('incomingArea').style.display = tab==='incoming' ? 'block' : 'none';
+            document.getElementById('sentArea').style.display = tab==='sent' ? 'block' : 'none';
+        }
+        window.onload = async function() { await loadIncoming(); await loadSent(); };
+        async function loadIncoming() {
+            const area = document.getElementById('incomingArea');
+            try {
+                const res = await api.getContactRequests();
+                if (!res.requests.length) { area.innerHTML = '<div class="empty">📭 No incoming requests yet.<br>When someone sends you a request, it will appear here.</div>'; return; }
+                area.innerHTML = '';
+                res.requests.forEach(r => renderCard(area, r, 'incoming'));
+            } catch(e) { area.innerHTML = `<div class="empty">❌ ${e.message}</div>`; }
+        }
+        async function loadSent() {
+            const area = document.getElementById('sentArea');
+            try {
+                const res = await api.getSentRequests();
+                if (!res.requests.length) { area.innerHTML = '<div class="empty">📤 No sent requests yet.<br><a href="profiles.html" style="color:#ce93d8">Find Roommates →</a></div>'; return; }
+                area.innerHTML = '';
+                res.requests.forEach(r => renderCard(area, r, 'sent'));
+            } catch(e) { area.innerHTML = '<div class="empty">📤 No sent requests yet.<br><a href="profiles.html" style="color:#ce93d8">Find Roommates →</a></div>'; }
+        }
+        function renderCard(area, r, type) {
+            const isSent = type==='sent';
+            const name = isSent ? (r.receiver_name||'User') : r.sender_name;
+            const initials = (name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+            const details = [r.location?'📍 '+r.location:'', r.budget?'💰 ₹'+Number(r.budget).toLocaleString():'', labelMap[r.gender]||'', labelMap[r.diet]||'', labelMap[r.personality]||'', labelMap[r.schedule]||''].filter(Boolean).join(' · ');
+            const userId = isSent ? r.receiver_id : r.sender_id;
+            let actionsHtml = '';
+            if (isSent) {
+                if (r.status==='pending') actionsHtml = `<span class="badge-pending">⏳ Pending</span>`;
+                if (r.status==='accepted') actionsHtml = `<span class="badge-accepted">✅ Accepted</span><button class="btn-chat" onclick="goChat(${userId},'${name.replace(/'/g,"\\'")}')">💬 Chat</button>`;
+                if (r.status==='rejected') actionsHtml = `<span class="badge-rejected">❌ Rejected</span>`;
+            } else {
+                if (r.status==='pending') actionsHtml = `<button class="btn-accept" onclick="respond(${r.id},'accepted',${userId},'${name.replace(/'/g,"\\'")}',this)">✅ Accept</button><button class="btn-reject" onclick="respond(${r.id},'rejected',${userId},'',this)">❌ Reject</button>`;
+                else if (r.status==='accepted') actionsHtml = `<span class="badge-accepted">✅ Accepted</span><button class="btn-chat" onclick="goChat(${userId},'${name.replace(/'/g,"\\'")}')">💬 Chat</button>`;
+                else actionsHtml = `<span class="badge-rejected">❌ Rejected</span>`;
+            }
+            const div = document.createElement('div');
+            div.className = 'req-card'; div.id = `req-${r.id}`;
+            div.innerHTML = `<div class="req-avatar">${initials}</div><div class="req-info"><div class="req-name">${name}</div><div class="req-details">${details||'No details'}</div>${r.message?`<div class="req-msg">"${r.message}"</div>`:''}</div><div class="req-actions" id="actions-${r.id}">${actionsHtml}</div>`;
+            area.appendChild(div);
+        }
+        async function respond(reqId, status, userId, userName, btn) {
+            btn.disabled = true;
+            try {
+                await api.respondToRequest(reqId, status);
+                const actions = document.getElementById(`actions-${reqId}`);
+                if (status==='accepted') actions.innerHTML = `<span class="badge-accepted">✅ Accepted</span><button class="btn-chat" onclick="goChat(${userId},'${userName}')">💬 Chat</button>`;
+                else actions.innerHTML = `<span class="badge-rejected">❌ Rejected</span>`;
+            } catch(e) { alert('Error: '+e.message); btn.disabled = false; }
+        }
+        function goChat(userId, name) { window.location.href = `chat.html?userId=${userId}&name=${encodeURIComponent(name)}`; }
+    </script>
+    </div><!-- end app-body -->
+
+    <script>
+    function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+    function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+    document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=700)closeSidebar();}));
+    </script>
+</body>
+</html>

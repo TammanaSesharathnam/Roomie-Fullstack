@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 14px; min-height: 100vh; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); display: flex; flex-direction: column; }
+        .topbar { display:none; background:#6a1b9a; padding:12px 16px; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .topbar .tbrand { color:#fff; font-size:15px; font-weight:700; }
+        .hamburger { background:none; border:none; cursor:pointer; padding:4px; display:flex; flex-direction:column; gap:5px; }
+        .hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+        .overlay.show { display:block; }
+        .app-body { display:flex; flex:1; }
+        .sidebar { width:220px; min-height:100vh; flex-shrink:0; background:#6a1b9a; padding:20px 14px; display:flex; flex-direction:column; gap:4px; z-index:200; transition:transform 0.28s; }
+        .sidebar .brand { color:#fff; font-size:16px; font-weight:700; text-align:center; padding:12px 2px 22px; }
+        .sidebar a { color:rgba(255,255,255,0.75); text-decoration:none; font-size:14px; display:block; padding:10px 14px; border-radius:8px; transition:background 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background:rgba(255,255,255,0.2); color:#fff; }
+        .sidebar .logout { margin-top:auto; color:#f48fb1 !important; }
+        .main { flex:1; padding:24px 28px; overflow-y:auto; }
+        .page-title { color:#fff; font-size:14px; font-weight:700; margin-bottom:2px; }
+        .sub { color:#ce93d8; font-size:14px; margin-bottom:20px; }
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+        .wide { grid-column:1/-1; }
+        .card { background:rgba(20,0,40,0.82); border-radius:14px; padding:20px; color:#fff; }
+        .card-icon { font-size:26px; margin-bottom:8px; }
+        .card-title { font-size:14px; font-weight:700; color:#ce93d8; margin-bottom:8px; }
+        .card-text { font-size:14px; color:#e1bee7; line-height:1.8; }
+        /* Who can use */
+        .who-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:10px; }
+        .who-card { background:rgba(255,255,255,0.07); border-radius:10px; padding:14px; text-align:center; }
+        .who-icon { font-size:24px; margin-bottom:6px; }
+        .who-label { font-size:13px; font-weight:600; color:#fff; margin-bottom:3px; }
+        .who-desc { font-size:12px; color:#ce93d8; line-height:1.5; }
+        /* Steps */
+        .step-list { list-style:none; padding:0; }
+        .step-list li { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:14px; color:#e1bee7; line-height:1.6; }
+        .step-list li:last-child { border-bottom:none; }
+        .step-num { width:26px; height:26px; border-radius:50%; background:#7b1fa2; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; flex-shrink:0; margin-top:1px; }
+        /* Features */
+        .feat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+        .feat-item { display:flex; align-items:center; gap:8px; font-size:13px; color:#e1bee7; padding:8px 10px; background:rgba(255,255,255,0.05); border-radius:8px; }
+        /* Tech badges */
+        .badge-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .badge { padding:5px 12px; border-radius:20px; background:rgba(206,147,216,0.15); border:1px solid rgba(206,147,216,0.3); color:#ce93d8; font-size:13px; }
+        /* Contact */
+        .contact-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); color:#e1bee7; font-size:14px; }
+        .contact-row:last-child { border-bottom:none; }
+        .contact-icon { font-size:18px; width:28px; flex-shrink:0; }
+        /* Team */
+        .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:12px; }
+        .team-card { background:rgba(255,255,255,0.07); border-radius:12px; padding:16px; text-align:center; }
+        .team-avatar { width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#ce93d8,#7b1fa2); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:#fff; margin:0 auto 8px; }
+        .team-name { font-size:13px; font-weight:600; color:#fff; margin-bottom:2px; }
+        .team-role { font-size:12px; color:#ce93d8; }
+        /* Mobile */
+        @media (max-width:700px) {
+            body { flex-direction:column; }
+            .topbar { display:flex; }
+            .sidebar { position:fixed; top:0; left:0; height:100vh; transform:translateX(-100%); padding-top:56px; min-height:unset; }
+            .sidebar.open { transform:translateX(0); box-shadow:4px 0 20px rgba(0,0,0,0.4); }
+            .main { padding:14px; }
+            .grid { grid-template-columns:1fr; }
+            .feat-grid { grid-template-columns:1fr; }
+            .who-grid { grid-template-columns:1fr 1fr; }
+            .team-grid { grid-template-columns:1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="tbrand">🏠 Roomie Connect</div>
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="app-body">
+    <div class="sidebar">
+        <div class="brand">🏠 Roomie Connect</div>
+        <a href="form.html">My Preferences</a>
+        <a href="p.html">My Profile</a>
+        <a href="profiles.html">Find Roommates</a>
+        <a href="requests.html">📩 Requests</a>
+        <a href="chat.html">💬 Chats</a>
+        <a href="map.html">🗺️ Hostel Map</a>
+        <a href="about.html" class="active">ℹ️ About</a>
+        <a href="index.html" class="logout" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="main">
+        <div class="page-title">ℹ️ About Roomie Connect</div>
+        <div class="sub">Find your perfect roommate — for everyone, everywhere</div>
+
+        <div class="grid">
+
+            <!-- What is it -->
+            <div class="card">
+                <div class="card-icon">🏠</div>
+                <div class="card-title">What is Roomie Connect?</div>
+                <div class="card-text">Roomie Connect is a smart roommate-finding platform that matches people based on lifestyle — food habits, personality, sleep schedule and budget. Whether you're a student, working professional, or relocating to a new city, we help you find the right person to share your space with.</div>
+            </div>
+
+            <!-- Mission -->
+            <div class="card">
+                <div class="card-icon">🎯</div>
+                <div class="card-title">Our Mission</div>
+                <div class="card-text">Finding a roommate shouldn't be random. We believe compatibility goes beyond just location — it's about daily habits, lifestyle, and comfort. Our mission is to make shared living easier, safer and more enjoyable for everyone — students, professionals, and anyone in between.</div>
+            </div>
+
+            <!-- Who can use -->
+            <div class="card wide">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Who Can Use Roomie Connect?</div>
+                <div class="card-text">Roomie Connect is for anyone looking for a compatible roommate — not just students!</div>
+                <div class="who-grid">
+                    <div class="who-card">
+                        <div class="who-icon">🎓</div>
+                        <div class="who-label">Students</div>
+                        <div class="who-desc">Find a hostel buddy near your college</div>
+                    </div>
+                    <div class="who-card">
+                        <div class="who-icon">💼</div>
+                        <div class="who-label">Working Professionals</div>
+                        <div class="who-desc">Split rent with like-minded colleagues</div>
+                    </div>
+                    <div class="who-card">
+                        <div class="who-icon">🚚</div>
+                        <div class="who-label">People Relocating</div>
+                        <div class="who-desc">Moving to a new city? Find a roommate first</div>
+                    </div>
+                    <div class="who-card">
+                        <div class="who-icon">👩</div>
+                        <div class="who-label">Women Only</div>
+                        <div class="who-desc">Filter by gender for a safe search</div>
+                    </div>
+                    <div class="who-card">
+                        <div class="who-icon">🥗</div>
+                        <div class="who-label">Diet Conscious</div>
+                        <div class="who-desc">Match with veg or non-veg flatmates</div>
+                    </div>
+                    <div class="who-card">
+                        <div class="who-icon">🌙</div>
+                        <div class="who-label">Night Owls & Early Birds</div>
+                        <div class="who-desc">Find someone with the same schedule</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How it works -->
+            <div class="card wide">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">How It Works</div>
+                <ul class="step-list">
+                    <li><div class="step-num">1</div>Create an account and fill your preferences — diet, schedule, personality, budget and city.</li>
+                    <li><div class="step-num">2</div>Browse profiles filtered by your lifestyle. See a compatibility score for each person.</li>
+                    <li><div class="step-num">3</div>Send a connection request with a personal message to anyone you like.</li>
+                    <li><div class="step-num">4</div>Once they accept, chat in real-time and plan your accommodation together.</li>
+                    <li><div class="step-num">5</div>Use the Hostel & PG Map to find accommodation near your preferred location.</li>
+                </ul>
+            </div>
+
+            <!-- Features -->
+            <div class="card wide">
+                <div class="card-icon">✨</div>
+                <div class="card-title">Features</div>
+                <div class="feat-grid">
+                    <div class="feat-item">🔐 Secure JWT login</div>
+                    <div class="feat-item">🔍 Smart preference filters</div>
+                    <div class="feat-item">💯 Compatibility score</div>
+                    <div class="feat-item">📩 Request & accept system</div>
+                    <div class="feat-item">💬 Real-time chat</div>
+                    <div class="feat-item">📸 Profile photo upload</div>
+                    <div class="feat-item">🔔 Instant notifications</div>
+                    <div class="feat-item">🚫 Block & report users</div>
+                    <div class="feat-item">🔑 Forgot password reset</div>
+                    <div class="feat-item">🗺️ Hostel & PG map</div>
+                    <div class="feat-item">📱 Mobile app (Android)</div>
+                    <div class="feat-item">🌐 Works on any device</div>
+                </div>
+            </div>
+
+            <!-- Tech stack -->
+            <div class="card">
+                <div class="card-icon">💻</div>
+                <div class="card-title">Built With</div>
+                <div class="card-text">A full-stack web application:</div>
+                <div class="badge-row">
+                    <span class="badge">Node.js</span>
+                    <span class="badge">Express</span>
+                    <span class="badge">MySQL</span>
+                    <span class="badge">HTML/CSS/JS</span>
+                    <span class="badge">JWT Auth</span>
+                    <span class="badge">Leaflet Maps</span>
+                    <span class="badge">Android WebView</span>
+                </div>
+            </div>
+
+            <!-- Safety -->
+            <div class="card">
+                <div class="card-icon">🛡️</div>
+                <div class="card-title">Safety & Privacy</div>
+                <div class="card-text">
+                    🔐 Passwords are encrypted with bcrypt<br>
+                    🚫 Block any user instantly<br>
+                    🚨 Report inappropriate profiles<br>
+                    👁️ Only connected users can chat<br>
+                    📧 Secure email-based password reset
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+        function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+        document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=700)closeSidebar();}));
+    </script>
+</body>
+</html>

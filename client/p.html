@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Roomie Connect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 14px; min-height: 100vh; background: linear-gradient(135deg, #6a1b9a 0%, #9c4dcc 100%); display: flex; }
+        /* ── SHARED SIDEBAR ── */
+        .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: #6a1b9a; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar .brand { color: #fff; font-size: 16px; font-weight: 700; text-align: center; padding: 12px 2px 22px;  }
+        .sidebar a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 14px; display: block; padding: 10px 14px; border-radius: 8px; transition: background 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; }
+        .sidebar .logout { margin-top: auto; color: #f48fb1 !important; }
+        /* ── PAGE ── */
+        .main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 30px 24px; }
+        .card { width: 100%; max-width: 560px; background: rgba(20,0,40,0.82); border-radius: 16px; padding: 30px; color: #fff; }
+        .avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg,#ce93d8,#7b1fa2); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; color: #fff; margin: 0 auto 12px; }
+        .name { text-align: center; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .email { text-align: center; color: #ce93d8; font-size: 14px; margin-bottom: 18px; }
+        .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 14px; background: rgba(206,147,216,0.2); border: 1px solid rgba(206,147,216,0.4); color: rgba(255,255,255,0.75); }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .info-item { background: rgba(255,255,255,0.07); border-radius: 10px; padding: 12px; }
+        .info-label { font-size: 14px; color: #ce93d8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .info-value { font-size: 14px; font-weight: 600; color: #fff; }
+        .bio-box { background: rgba(255,255,255,0.07); border-radius: 10px; padding: 12px; margin-bottom: 20px; }
+        .bio-label { font-size: 14px; color: #ce93d8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .bio-text { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; }
+        .btn { display: block; width: 100%; padding: 12px; background: #7b1fa2; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; margin-bottom: 10px; transition: background 0.2s; }
+        .btn:hover { background: #9c4dcc; }
+        .btn-outline { background: transparent; border: 2px solid rgba(206,147,216,0.5); color: #ce93d8; }
+        .btn-outline:hover { background: rgba(206,147,216,0.1); }
+
+        /* ── MOBILE RESPONSIVE ── */
+        .topbar { display:none; background:#6a1b9a; padding:12px 16px; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+        .topbar .tbrand { color:#fff; font-size:15px; font-weight:700; }
+        .hamburger { background:none; border:none; cursor:pointer; padding:4px; display:flex; flex-direction:column; gap:5px; }
+        .hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; }
+        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+        .overlay.show { display:block; }
+        .app-body { display:flex; flex:1; min-height:0; }
+        @media (max-width:700px) {
+            body { flex-direction:column; }
+            .topbar { display:flex; }
+            .sidebar { position:fixed; top:0; left:0; height:100vh; transform:translateX(-100%); padding-top:56px; z-index:200; transition:transform 0.28s; min-height:unset; }
+            .sidebar.open { transform:translateX(0); box-shadow:4px 0 20px rgba(0,0,0,0.4); }
+            .app-body { flex:1; overflow:hidden; }
+            .main { width:100% !important; padding:14px !important; overflow-y:auto; }
+            .card { padding:18px !important; }
+            .grid { grid-template-columns:1fr !important; }
+            .form-row { grid-template-columns:1fr !important; }
+            .content { flex-direction:column !important; }
+            .results-panel { width:100% !important; max-width:100% !important; }
+            #map { min-height:260px !important; }
+            .filter-chips { gap:6px !important; }
+            .chip { font-size:13px !important; padding:7px 10px !important; }
+            .source-tabs { flex-wrap:wrap !important; gap:6px !important; }
+            .team-grid { grid-template-columns:1fr 1fr !important; }
+            .search-bar { flex-direction:column !important; }
+            .search-bar input, .search-bar select { width:100% !important; min-width:unset !important; }
+            .profiles-grid { grid-template-columns:1fr !important; }
+            .msg-input-row { flex-direction:row !important; }
+            .tab-bar { flex-wrap:nowrap !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile topbar -->
+    <div class="topbar">
+        <div class="tbrand">🏠 Roomie Connect</div>
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    </div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="app-body">
+    <div class="sidebar">
+        <div class="brand">🏠 Roomie Connect</div>
+        <a href="form.html">My Preferences</a>
+        <a href="p.html" class="active">My Profile</a>
+        <a href="profiles.html">Find Roommates</a>
+        <a href="requests.html">📩 Requests</a>
+        <a href="chat.html">💬 Chats</a>
+        <a href="map.html">🗺️ Hostel Map</a>
+        <a href="about.html">ℹ️ About</a>
+        <a href="index.html" class="logout" onclick="logout()">Logout</a>
+    </div>
+    <div class="main">
+        <div class="card">
+            <div class="avatar" id="avatarEl">?</div>
+            <div class="name" id="nameEl">Loading...</div>
+            <div class="email" id="emailEl"></div>
+            <div class="badges" id="badgesEl"></div>
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">Location</div><div class="info-value" id="locationEl">—</div></div>
+                <div class="info-item"><div class="info-label">Budget</div><div class="info-value" id="budgetEl">—</div></div>
+                <div class="info-item"><div class="info-label">Gender</div><div class="info-value" id="genderEl">—</div></div>
+                <div class="info-item"><div class="info-label">Phone</div><div class="info-value" id="phoneEl">—</div></div>
+            </div>
+            <div class="bio-box">
+                <div class="bio-label">About Me</div>
+                <div class="bio-text" id="bioEl">No bio yet.</div>
+            </div>
+            <a href="profiles.html" class="btn">🔍 Find Roommates</a>
+            <a href="form.html" class="btn btn-outline">✏️ Edit Preferences</a>
+        </div>
+    </div>
+    <script src="api.js"></script>
+    <script>
+        requireAuth();
+        const labelMap = { veg:'🥗 Veg', nonveg:'🍗 Non-Veg', male:'👨 Male', female:'👩 Female', other:'🧑 Other', introvert:'🎧 Introvert', extrovert:'🎉 Extrovert', morningbird:'🌅 Morning Bird', nightowl:'🌙 Night Owl' };
+        window.onload = async function() {
+            try {
+                const res = await api.getMyProfile();
+                const u = res.user;
+                document.getElementById('avatarEl').textContent = (u.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+                document.getElementById('nameEl').textContent = u.name || 'No name';
+                document.getElementById('emailEl').textContent = u.email;
+                document.getElementById('locationEl').textContent = u.location || '—';
+                document.getElementById('budgetEl').textContent = u.budget ? '₹' + Number(u.budget).toLocaleString() : '—';
+                document.getElementById('genderEl').textContent = u.gender ? u.gender.charAt(0).toUpperCase()+u.gender.slice(1) : '—';
+                document.getElementById('phoneEl').textContent = u.phone || '—';
+                document.getElementById('bioEl').textContent = u.bio || 'No bio yet.';
+                document.getElementById('badgesEl').innerHTML = [u.diet,u.personality,u.schedule].filter(Boolean).map(b=>`<span class="badge">${labelMap[b]||b}</span>`).join('');
+            } catch(e) {
+                const user = getUser ? getUser() : null;
+                if (user) { document.getElementById('nameEl').textContent = user.name||'No name'; document.getElementById('emailEl').textContent = user.email||''; }
+            }
+        };
+    </script>
+    </div><!-- end app-body -->
+
+    <script>
+    function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+    function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+    document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=700)closeSidebar();}));
+    </script>
+</body>
+</html>
